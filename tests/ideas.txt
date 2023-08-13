@@ -1,0 +1,4 @@
+- Record stock video of aruco in room and create test that verifies
+  the correct/measured distance (~70cm?).
+  - Extend/Combine this test with a test of calibration. Use calibration
+    image set to calibrate, then perform aruco detection+distance measurement.

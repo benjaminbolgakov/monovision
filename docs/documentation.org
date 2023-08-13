@@ -1,0 +1,1015 @@
+* Outline
+** Libraries/Tools
+|-----------------------+----------|
+| *Library*             |  Version |
+|-----------------------+----------|
+| opencv-contrib-python | 4.6.0.66 |
+| numpy                 |   1.24.2 |
+| matplotlib            |    3.7.1 |
+| PySDL2                |   0.9.15 |
+| wheel                 |   0.40.0 |
+| scikit-image          |   0.20.0 |
+|-----------------------+----------|
+| *Hardware*            |          |
+|-----------------------+----------|
+| Logitech Webcam C930e |          |
+|-----------------------+----------|
+*** TODO Libraries
+https://github.com/dfki-ric/pytransform3d
+* Definitions
+** Image Plane
+
+** Pixel Coordinates
+
+
+** Egomotion
+Egomotion is defined as the 3D motion of a camera within
+an environment. In the field of computer vision, egomotion refers to
+estimating a camera's motion relative to a rigid scene.
+
+* Markers
+** Aruco
+Smaller amount of bits used in the marker-matrix allows for detection
+at greater distance, but decreases amount of markers possible in
+dictionary. *Solved by Charuco?* , *Isn't an issue: 2^16 different
+markers possible 4x4 dict*
+
+*** *Notes*
+- Need to have a margin of white background/paper around markers
+  outermost black layer for detection. (Ref: Rafael Munoz Salinas youtube E2)
+** Dictionary
+| Types | Res   |                   |
+|-------+-------+-------------------|
+|   4x4 | 16bit | (50,100,250,1000) |
+|   5x5 | 25bit | -=-               |
+|   6x6 | 36bit | -=-               |
+|   7x7 | 49bit |                   |
+
+* Camera Calibration
+** General
+https://en.wikipedia.org/wiki/Camera_resectioning
+** Procedure
+1. Capture image of object with known geometry
+2. Identify correspondances between 3D-scene points
+   and image points.
+#+attr_html: :width 100px
+[[../media/calibration/calibration_2.png]]
+3. Using identified image and scene-points, expand
+   for each point's matrix, a linear equation.
+_*Homogenous equations, i.e scalable.*_
+#+attr_html: :width 300px
+[[../media/calibration/calibration_3.png]]
+4. Combine all obtained matrices and rearrange
+   the terms, producing the Projection-matrix.
+#+attr_html: :width 300px
+[[../media/calibration/calibration_4.png]]
+5. Solve for 'p' [*Least Squares method*]
+- Set scale so that: ||p||^2 = 1
+- Calculate Ap(min)->0 such that ||p||^2 = 1
+- Define *Loss Function L(p,x) = P^T * A^T * Ap - x(
+https://www.youtube.com/watch?v=GUbWsXU1mac&list=PL2zRqk16wsdoCCLpou-dGo7QQNks1Ppzo&index=3
+
+** Chessboard
+*Dimensions* = 5x8
+*Square size* = 2cm
+
+* FastSLAM
+https://iopscience.iop.org/article/10.1088/1757-899X/551/1/012053/pdf
+** Outline Visual Odometry Pipeline
+*Ego-motion* = 3D motion of camera within an environment.
+_1. Image sequencing_
+Acquire images/frames and apply image processing techniques as
+necessary, i.e, distortion removal etc.
+_2. Feature detection_
+Detect distinctive projected world points, i.e the points between frames,
+and use the pixel-coordinates of the points to determine the ego-motion
+_3. Feature matching_
+
+_4. Motion estimation_
+Pose estimation of camera, frame by frame, produces the motion estimation.
+a.) Kalman Filter: for state estimate distribution maintenance.
+b.) Find geometric and 3D properties of the features that minimize a
+'cost-function' based on the re-projection error between two adjacent images
+by using either 'mathematical minimization' or 'random sampling'.
+
+_5. Local optimization[optional]_
+
+** Outline V1
+1. _Initialization:_
+Initialize the particle filter by randomly sampling
+particles in the state space, where each particle represents a
+possible pose of the robot. The state of each particle is represented
+by a pose (position and orientation) and a set of landmarks (their
+positions in the map).
+
+2. _Prediction:_
+For each particle, predict its new pose based on the
+motion model and the control input (e.g. odometry readings) from the
+robot.
+
+3. _Landmark update:_
+For each particle, update the positions of the
+observed landmarks based on the current camera measurement. Use the
+normalized feature coordinates and the camera intrinsic parameters to
+triangulate the 3D position of each landmark.
+
+4. _Data association:_
+Match the observed landmarks with the landmarks in
+the map using a nearest-neighbor search based on the Mahalanobis
+distance. This step helps to associate observed landmarks with the
+correct landmarks in the map and reduce the overall uncertainty.
+
+5. _Weight update:_
+For each particle, calculate the likelihood of the
+observation given the map and the particle's pose. This likelihood is
+used to assign a weight to each particle. Particles with higher
+weights are more likely to represent the true pose of the robot.
+
+6. _Resampling:_
+Resample the particles based on their weights. The
+particles with higher weights are more likely to be sampled again,
+while particles with lower weights may be discarded. This step helps
+to focus the particle filter on the most probable areas of the state
+space.
+
+7. _Loop:_
+Repeat steps 2-6 for each time step.
+
+- The fastSLAM algorithm combines a particle filter with an extended
+  Kalman filter (EKF) to estimate the robot's pose and map of
+  landmarks. The EKF is used to estimate the uncertainty in the
+  position of each landmark and to update the covariance matrix of the
+  robot's state. The particle filter is used to represent the
+  multimodal posterior distribution over the robot's pose and the map.
+** Outline V2
+1. _Extract features_
+   Extract ORB-features from each frame and match with previous
+   frame's detected ORB-features.
+2. _Particle initialization_
+   Init the particle filter with a set of random poses and landmarks.
+   Each particle represents a hypothesis of the camera's pose and the
+   location of landmarks.
+3. _Landmark estimation_
+   For each particle, the system estimates the location of landmarks
+   in the environment using extracted features. Landmarks are represented
+   as a set of parameters such as position & orientation. The estimated
+   landmark locations are then used to update the particles weights.
+4. _Resampling_
+   Particles with low weight are resampled to create new particles with
+   higher weights in order to concentrate the particle distribution around
+   the more likely poses of the camera and the landmark locations.
+5. _Particle update_
+   Particle filter is updated with new sensor data. For each particle, the
+   system updates the estimated pose and landmark locations using sensor data.
+   This is done by using Bayes rule to calculate the posterier probability of
+   the camera's pose and landmark locations. The updated particle weights are
+   computed based on consistency of the sensor data with the estimated pose
+   and landmark locations.
+6. _Map construction_
+   Estimated landmark locations from each particle are used to build a
+   map of the environment. Can be done using i.e "Occupancy Grid Mapping"
+   or "Feature-Based Mapping".
+7. _Loop closing_
+   When the camera revisits an area it has mapped, it uses loop closing
+   techniques to align the maps and reduce errors.
+** Outline V3
+_1. Initialization:_
+   The algorithm begins by initializing the particle
+   filter with a set of particles, each representing a possible state
+   of the robot. The particles are generated randomly or using some
+   prior information about the robot's initial pose.
+
+_2. Motion Update:_
+   The next step is to update the particles based on
+   the robot's motion model. The motion model predicts the position of
+   the robot based on its previous pose and control input. Each
+   particle is updated using the motion model, and a weight is
+   assigned to each particle based on how well it predicts the robot's
+   actual position.
+   - _Model required:_ *Visual Odometry Model*
+     This model estimates the robot's motion based on visual features
+     detected by a camera. It compares the position of the visual
+     features in successive frames and estimates the transformation
+     required to align them. This model is commonly used in
+     visual-based SLAM systems.
+
+_3. Measurement Update:_
+   The particles are then updated based on sensor
+   measurements. The robot's sensors are used to detect features in
+   the environment, such as landmarks, and the measurements are
+   compared to the predicted measurements for each particle. The
+   difference between the predicted and actual measurements is used to
+   assign a weight to each particle.
+
+_4. Resampling:_
+   After the motion and measurement updates, some
+   particles will have higher weights than others, indicating that
+   they are more likely to represent the true state of the robot. The
+   resampling step randomly selects particles from the set of
+   particles with probabilities proportional to their weights. This
+   means that particles with higher weights are more likely to be
+   selected than particles with lower weights.
+
+_5. Mapping:_
+   The final step of the algorithm involves building a map of
+   the environment based on the estimated robot pose and the detected
+   landmarks. The map can be represented as a set of feature locations
+   and their associated uncertainties. The algorithm uses the
+   highest-weighted particle to update the map.
+
+_6. Loop:_
+   The algorithm repeats steps 2-5 for each time step in the
+   robot's operation, allowing the map and robot pose to be
+   continually updated as new sensor data becomes available.
+
+** Outline V4
+1. Extract ORB-features from each frame and match
+   with previous frame's ORB-features.
+2. Found matches along the epipolar line are then
+   triangulated to determine their 3D-position.
+3. Based on their 3D-3D correspondance, estimate the
+   transformation between the frames by SVD-decomposition
+   with RANSAC. *(Maybe only applicable for stereo?)*
+4. Then the active points are transformed and merged into
+   a PCL point-cloud. *(Maybe only applicable for stereo?)*
+* Particle Filter
+Multiple particles/samples represent arbitrary distributions.
+Every sample contain a 'weight'/'probability-mass'. Higher weight
+indicate higher probability.
+Areas with high density particles indicate higher probability
+for the system location.
+
+** Particle Set
+- A set of weighted samples:
+  X_set = {[x[j], w[k]]}, j=1, .., J
+  x[j] = state hypothesis
+  w[j] = weight
+
+* Core
+** Camera Models
+A camera model is, in general, a mapping from world
+to image coordinates.
+*** Pinhole Model
+|-----+---+---+---|
+|     |   |   |   |
+| P = |   |   |   |
+
+
+*** Intrinsics
+- Defines the camera image format, including focal-length,
+  pixel size & image origin. These parameters allow for
+  mapping between pixel coords and camera coords in the
+  image frame.
+_Intrinsic/Calibration Matrix (K)_
+|----+----+----|
+| fx |  0 | cx |
+|  0 | fy | cy |
+|  0 |  0 | 1  |
+|----+----+----|
+fx,fy = Focal length
+cx,cy = Optical centers
+_Camera Matrix_
+|----+----+----+---|
+| fx |  0 | cx | 0 |
+|  0 | fy | cy | 0 |
+|  0 |  0 | 1  | 0 |
+|----+----+----+---|
+
+*** Extrinsics
+- Defines the camera's pose, i.e it's position and orientation with
+  respect to the world frame. Or with other words, the position of
+  the camera center and the camera's heading in world coordinates.
+_Rotation Matrix_
+|---+---|
+| R | T |
+| 0 | 1 |
+|---+---|
+*R = Rotation matrix*:
+...
+*T = Translation vector*:
+Position of the origin of the world coordinate system expressed
+in coordinates of the camera-centered coordinate system.
+_Extrinsic Matrix_
+|-----+-----+-----+----|
+| R11 | R12 | R13 | Tx |
+| R21 | R22 | R23 | Ty |
+| R31 | R32 | R33 | Tz |
+|-----+-----+-----+----|
+T = -R * Cw
+Cw = position of camera (world coordinates)
+- Rewriting the extrinsic matrix using homogeneous coordinates:
+|-----+-----+-----+----|
+| R11 | R12 | R13 | Tx |
+| R21 | R22 | R23 | Ty |
+| R31 | R32 | R33 | Tz |
+| 0   | 0   | 0   | 1  |
+|-----+-----+-----+----|
+
+** Camera Pose Estimation
+Using only one camera, it's pose can be estimated using
+triangulation given that a correspondance between 3D points
+in the world and their 2D projections in the camera image.
+*solvePnP* can be used for this.
+
+*** Ex1
+c_pos = -R.T * t
+- Where:
+  R.T = transpose(R)
+*** Ex2
+_, rVec, tVec = cv2.solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs)
+Rt = cv2.Rodrigues(rvec)
+R = Rt.transpose()
+pos = -R * tVec
+
+** Imaging Model
+*** 3D to 2D
+_Image Coordinates_:
+|-----+----|
+| Xi= | xi |
+| \\\ | yi |
+|-----+----|
+_Camera Coordinates_:
+|-----+----|
+|     | xc |
+| Xc= | yc |
+|     | zc |
+|-----+----|
+_World Coordinates_:
+|-----+----|
+|     | xw |
+| Xw= | yw |
+|     | zw |
+|-----+----|
+*** TODO Convert/Transform
+*Ref*:
+https://youtu.be/qByYk6JggQU?list=PL2zRqk16wsdoCCLpou-dGo7QQNks1Ppzo&t=123
+|    |    |    |    |    |
+|----+----+----+----+----|
+| Xw | -> | Xc | -> | Xi |
+|    |    |    |    |    |
+
+*** 3D Reconstruction
+Construct a 3D model of an object/scene from a
+series of 2D images using the camera's intrinsic
+and extrinsic parameters when capturing the images.
+Both parameters are obtained through camera calibration.
+
+*Intrinsic*: Focal length, image sensor size, optical center.
+*Extrinsic*: Position & Orientation of camera relative to the
+scene being captured.
+** SolvePnP
+*** TODO
+** RANSAC
+*** Outline
+RANSAC is a robust method for estimating parameters of a mathematical
+model from a set of observed data points that may contain outliers.
+RANSAC is able to identify inliers, i.e, the matches that are consistent
+with the fundamental matrix and removes the outliers, i.e, noise.
+
+RANSAC iteratively estimates the parameters from the data set. At each
+iteration the following steps are performed:
+
+1.  Select min_samples random samples from the original data and check
+    whether the set of data is valid (see is_data_valid option):
+
+2.  Estimate a model on the random subset
+   (model_cls.estimate(*data[random_subset]) and check whether the
+   estimated model is valid (see is_model_valid option).
+
+3.  Classify all the data points as either inliers or outliers by
+    calculating the residuals using the estimated model
+    (model_cls.residuals(*data)) - all data samples with residuals
+    smaller than the residual_threshold are considered as inliers.
+
+4.  If the number of the inlier samples is greater than ever before,
+    save the estimated model as the best model. In case the current
+    estimated model has the same number of inliers, it is considered
+    as the best model only if the sum of residuals is lower.
+
+These steps are performed either a maximum number of times or until
+one of the special stop criteria are met. The final model is estimated
+using all the inlier samples of the previously determined best model.
+*** Ex
+#+begin_src python
+  model, inliers = ransac((ret[:, 0], ret[:, 1]),
+      EssentialMatrixTransform,
+      min_samples=8,
+      residual_threshold=1,
+      max_trials=100)
+  ret = ret[inliers]
+  print(model.params)
+  # Coordinates of the estimated model can then be generated:
+  line_x = np.arrange(-250, 250)
+  line_y = model.predict_y(line_x)
+#+end_src
+_model params_:
+[[-0.00109691  0.22129855  0.02021552]
+ [-0.22946017 -0.01207897 -1.00073453]
+ [-0.02582044  0.96404396 -0.00357936]]
+
+** Monocular Visual-Odometry
+*** Pose Estimation
+- MVO requires using stereo images or wheel odometry
+  in order to determine _tvec_:
+
+** Motion Model
+*** Outline V1
+Here are the general steps to determine the motion model using visual
+odometry:
+_1. Extract visual features:_
+   Use a feature extraction algorithm such
+   as SIFT or ORB to detect and track the features in the camera
+   image.
+_2. Match feature correspondences:_
+   Use a feature matching algorithm such as RANSAC to find the
+   correspondences between the features in consecutive frames.
+_3. Compute the Essential Matrix:_
+   Use the matched feature correspondences to compute the Essential Matrix,
+   which describes the relative pose change between the two camera frames.
+
+_4. Decompose the Essential Matrix:_
+   Decompose the Essential Matrix into the relative rotation and
+   translation between the two frames.
+
+_5. Update the motion model parameters:_
+   Use the relative rotation and translation to update the motion model parameters,
+   such as the noise parameters for the control inputs, which can then be used in
+   the prediction step of the particle filter.
+
+It's important to note that visual odometry has its limitations, such
+as being susceptible to drift and errors due to occlusions or moving
+objects in the scene. Therefore, it's recommended to combine visual
+odometry with other sensors or techniques, such as loop closure
+detection or SLAM, for more robust and accurate localization and
+mapping.
+
+In summary, you can determine the motion model parameters using visual
+odometry, by tracking the movement of visual features in the scene and
+updating the motion model based on the estimated relative pose change
+between consecutive frames. However, it's important to be aware of the
+limitations and potential errors of this approach, and consider
+combining it with other sensors or techniques for more robust and
+accurate localization and mapping.
+*** Outline V2
+In the absence of additional sensors like an IMU or a wheel encoder,
+the motion model for the robot can be defined based on the camera's
+motion. The motion model can be used to predict the robot's new pose
+at each time step, given its current pose and the control input.
+
+The simplest motion model assumes that the camera moves in a straight
+line with constant speed and heading. In this case, the robot's new
+pose can be predicted using the following equations:
+#+begin_src python
+  x_new = x + v * cos(theta) * dt
+  y_new = y + v * sin(theta) * dt
+  theta_new = theta
+#+end_src
+
+where x, y, and theta are the current position and orientation of the
+robot, v is the linear velocity of the camera, dt is the time step,
+and x_new, y_new, and theta_new are the predicted new position and
+orientation of the robot.
+
+A more sophisticated motion model can be used if additional
+information about the robot's motion is available, such as the angular
+velocity of the camera or the acceleration of the robot. In this case,
+an extended Kalman filter (EKF) can be used to estimate the robot's
+motion more accurately, based on the camera's motion and any
+additional information available.
+
+Note that the motion model is only one component of the fastSLAM
+algorithm, and its accuracy can have a significant impact on the
+overall performance of the algorithm. Therefore, it is important to
+choose an appropriate motion model based on the available information
+and to validate its accuracy using ground truth data or other methods.
+** Coordinate System
+*** General
+*Ref*:
+X', (x',y',z') = Homogeneous point, homogeneous coords
+X, (x,y,z) = Inhomogeneous point, inhomogeneous coords
+f = Focal length (px) = distance from camera center to image plane in pixels.
+|-------+---------------+--------------------|
+| Point | System        | Coordinates        |
+|-------+---------------+--------------------|
+| X_i   | Image coords  | (x_i, y_i)         |
+| X_c   | Camera coords | (x_c, y_c, z_c)    |
+| X_w   | World coords  | (x_w, y_w, z_w)    |
+|-------+---------------+--------------------|
+| X     | All           | (x,y)              |
+|-------+---------------+--------------------|
+- In homogeneous coordinates, a 2D point (x,y) in
+  euclidean space is represented by the augmented
+  vector (x',y',w), where:
+  |-------+-----+----------------|
+  | x' =  | x/w |                |
+  | y' =  | y/w |                |
+  | w  != | 0   | Scaling factor |
+  |-------+-----+----------------|
+  By convention, _w_ is usually set to 1, which means
+  that the point's location remains the same. When _w_
+  is any other non-zero value, the point's location may
+  be represented at infinity or to perform perspective-
+  transformation using matrix multiplication.
+*Ex*:
+_2D-point_: (3,4) =>
+_3D-point_: (3/2, 4/2, 1) => scaling=2 (w=2) =>
+_3D-point_: (6,8,2)
+=> (6,8,2) = (3,4)
+
+*** 2D/3D Points
+|-------------------+--------------------|
+| _2D Points_       | w=scaling factor   |
+|-------------------+--------------------|
+| Inhomogeneous:    | (x,y) ∈ R^2        |
+| Augmented vector: | (x,y,1)            |
+| Homogeneous:      | (x',y',w') ∈ P^2   |
+|-------------------+--------------------|
+| where P^2 =       | R^3 \ {(0,0,0)}    |
+|                   | (projective space) |
+|-------------------+--------------------|
+_*NOTE*_:
+Homogeneous vectors that differ only by scale are considered
+equivalent and define an equivalence class i.e they are defined only
+up to scale. The main advantage of homogeneous coordinates is that they
+enable the representation of points at infinity and perspective transformations
+as linear transformations, i.e, a perspective transformation can be represented
+by a matrix multiplication.
+- An inhomogeneous vector X is transformed to a homogeneous
+  vector X' as follows:
+  |------+----+---+---+---+---+---+---|
+  |      | x' |   | x |   | x |   |   |
+  | X' = | y' | = | y | = | 1 | = | X |
+  |      | w' |   | 1 |   |   |   |   |
+  |------+----+---+---+---+---+---+---|
+- Transformation in the opposite direction by dividing by _w'_ :
+X = (x,1) = (x,y,1) = (x', y', w')/w' = ((x'/w'), (y'/w'), 1) = X'
+
+*** Perspective Projection [X'_c -> X'_i]
+(x_i / f) = (x'_c / z'_c)
+- In perspective projection, 3D points in camera coords(x_c, y_c) are
+  mapped to the image-plane by dividing them by their 'z'-component and
+  multiplying with the focal length(f):
+_*Inhomogeneous*_:
+|--------+---+-------------|
+| x_i    |   | f*(x_c/z_c) |
+| y_i    | = | f*(y_c/z_c) |
+|--------+---+-------------|
+_*Homogeneous*_: [linear form]
+|--------+----+----+----+---+---+------|
+|        | fx |  0 | cx | 0 |   |      |
+| X'_i = |  0 | fy | cy | 0 | * | X'_c |
+|        |  0 |  0 | 1  | 0 |   |      |
+|--------+----+----+----+---+---+------|
+*i.e*:
+X'_i = K * X_c
+
+*** Transformation Chaining [X'_w -> X'_i]
+- Let 'K' be the intrinsic/calibration matrix, and [R|t]
+  the camera pose (extrinsics). Chain both transformations
+  to project a point in world coords to the image:
+X'_i = [K 0]*X'_c = K*[R|t]*X'_w = P*X'_w =>
+X'_i = P*X'_w
+
+*** Camera coordinates
+*** Image coordinates (x)
+- _Homoegeneous 3x1 image-point_:
+| x |
+|---|
+| x |
+| y |
+| z |
+
+*** World coordinates (X)
+- _Homoegeneous 4x1 world-point_:
+| X |
+|---|
+| X |
+| Y |
+| Z |
+| 1 |
+
+*** Mapping
+- _General mapping of pinhole camera_:
+P = KR[I|-C] = K[R|t] (t=-RC)
+- _3D point to 2D image-points_:
+  x = PX
+- _Map point to line(l)_:
+  l = Ex (*E=essential mtx*)
+- _Map point to point_:
+  X' = Hx
+*** Normalizing Coordinates
+Given a non-zero vector, normalizing means to scale it so that
+the last element = 1. This enables knowing which vector in 'R'
+a specific projective element in P(R) represents.
+
+The normalization process involves applying a linear transformation to
+the image coordinates so that they have zero mean and a standard
+deviation of 1. This is typically done by first applying an inverse
+transformation to the intrinsic camera matrix to obtain normalized
+image coordinates, and then applying the same transformation to the
+corresponding 3D points in the scene. After the fundamental matrix is
+estimated, the normalized coordinates can be transformed back to the
+original image space.
+
+By normalizing the coordinates, the fundamental matrix estimation
+becomes more robust to changes in scale, rotation, and translation of
+the scene, and can handle scenes with large depth variations more
+effectively.
+**** TODO Ex (*Might be wrong*):
+#+begin_src python
+  def normalize(self, pts):
+    return np.dot(self.Kinv, add_ones(pts).T).T[:, 0:2]
+
+  ret = np.array(ret)
+  ret[:, 0, :] = self.normalize(ret[:, 0, :])
+  ret[:, 1, :] = self.normalize(ret[:, 1, :])
+#+end_src
+_ret_:
+[[[101. 108.]
+  [116. 114.]]
+
+ [[175. 243.]
+  [188. 245.]]
+
+ [[266. 207.]
+  [274. 209.]]
+  ...
+_ret_n_:
+[[[-1.4037037  -0.6       ]
+  [-1.34814815 -0.57777778]]
+
+ [[-1.12962963 -0.1       ]
+  [-1.08148148 -0.09259259]]
+
+ [[-0.79259259 -0.23333333]
+  [-0.76296296 -0.22592593]]
+  ...
+
+*** Homo/Inhomogeneous Coordinates
+_Inhomogeneous_:
+X_c = R(X_w - C)
+_Homogeneous_:
+
+** Camera initial position&orientation
+To calculate the initial position and orientation of the robot, you
+will need to use a method called "camera resectioning" or "camera
+localization". This involves using the camera's intrinsic parameters
+(which you already have) and a set of 3D points with known positions
+(called "calibration points" or "fiducial markers") to estimate the
+position and orientation of the camera with respect to the world
+coordinate system.
+
+Here are the general steps to perform camera resectioning:
+
+Place a set of known 3D calibration points in the camera's field of
+view. These points should be visible in multiple camera frames from
+different angles.
+
+Measure the 2D pixel coordinates of each calibration point in each
+camera frame.
+
+Use the camera's intrinsic parameters and the 2D pixel coordinates to
+calculate the 3D position of each calibration point in the camera
+coordinate system.
+
+Use a calibration algorithm (such as PnP) to estimate the position and
+orientation of the camera with respect to the world coordinate system,
+based on the 3D positions of the calibration points.
+
+Once you have estimated the position and orientation of the camera
+with respect to the world coordinate system, you can use this
+information to determine the initial position and orientation of the
+robot. This will depend on the specific setup and configuration of
+your system, but generally, you can define a transformation matrix
+that maps the camera coordinates to the robot coordinates. This matrix
+will include the translation and rotation components that describe the
+position and orientation of the camera with respect to the robot. You
+can then use this transformation matrix to calculate the initial
+position and orientation of the robot based on the known position and
+orientation of the camera.
+** World-to-Camera Transformation
+- Given the extrinsic parameters (R, Cw) of the camera, the
+  camera-centric location of the point 'P' in the world
+  coordinate frame is:
+Xc = R(Xw-Cw) = R*Xw - R*Cw = R*Xw + T
+where 'T' = -R*Cw
+|------+-----+-----+-----+----+---+----|
+|      | R11 | R12 | R13 | Tx |   | Xw |
+| Xc = | R21 | R22 | R23 | Ty | * | Yw |
+|      | R31 | R32 | R33 | Tz |   | Zw |
+|      | 0   | 0   | 0   | 1  |   | 1  |
+|------+-----+-----+-----+----+---+----|
+** 3D <-> 2D
+- Mapping between 3D world and 2D image.
+x = PX
+x = 2D image point (3x1 homogeneous)
+P = Camera matrix (3x4)
+X = 3D world point (4x1 homogeneous)
+
+** Essential/Fundamental Matrix
+|---+--------------------------------------------|
+| K | Intrinsic camera matrix (mtx) [K'=inverse] |
+| T | Translation vector                         |
+|---+--------------------------------------------|
+**** Essential Matrix
+Describes the relationship between two calibrated views
+of a scene captured by camera. It's 3x3 matrix encapsulates
+the intrinsic parameters of the camera(s) and the relative
+orientation between the two views.
+_- If:_
+  y & y' are homogeneous normalized image coordinates in
+  image 1 and 2 respectively and they correspond to the
+  same 3D point in the scene:
+_- Then:_
+  ((y')^T) * E * y = 0
+
+**** Fundamental Matrix
+Describes the relationship between two views of a scene
+captured by camera. It's 3x3 matrix encapsulates the intrinsic
+and extrinsic parameters of the camera(s) and the geometry
+of the scene.
+_- If:_
+  x & x' are homogeneous image coordinates of corresponding
+  points in a stereo image pair.
+- Then:
+  F*x describes a (epipolar) line on which the corresponding
+  point x' on the other image must lie. Therefore:
+_- For all pairs of corresponding points:_
+x' * T * F * x = 0
+
+
+- The two matrices are related to eachother according to:
+E = ((K')^T) * F * K
+** Matrices/Vectors
+*** TODO Refs
+https://www.cs.cmu.edu/~16385/s17/Slides/10.0_2D_Transforms.pdf
+https://www.cs.cmu.edu/~16385/s17/Slides/11.1_Camera_matrix.pdf
+https://dsp.stackexchange.com/questions/2736/step-by-step-camera-pose-estimation-for-visual-tracking-and-planar-markers/2737#2737
+*** Camera Matrix
+- _Allows for translation between 3D -> 2D image points:_
+  P = KR[I|-C]  -> (translate first, then rotate)
+*K = intrinsic/calibration matrix (3x3)*
+*R = 3D rotation matrix (3x3)*
+*I = identity matrix (3x3)*
+*C = 3D translation vector (3x1)*
+- _Can be rewritten as:_
+  P = K[R|t]  -> (rotate first, then translate)
+*t = -RC*
+- _3D points are translated into 2D image points by:_
+  x = P * X
+
+
+
+*** Random
+_Intrinsic/Calibration Matrix (K)_
+|----+----+----|
+| fx |  0 | cx |
+|  0 | fy | cy |
+|  0 |  0 | 1  |
+|----+----+----|
+fx,fy = Focal length
+cx,cy = Optical centers
+
+_Rotation Matrix (R)_
+|-----+-----+-----|
+| r_n | r_n | r_n |
+| r_n | r_n | r_n |
+| r_n | r_n | r_n |
+|-----+-----+-----|
+- 3D rotation
+
+_Translation Vector (t)_
+| t  |
+|----|
+| t1 |
+| t2 |
+| t3 |
+|----|
+- 3D translation
+
+_Transformation Matrix [R|t]_
+|-----+-----+-----+----|
+| R11 | R12 | R13 | Tx |
+| R21 | R22 | R23 | Ty |
+| R31 | R32 | R33 | Tz |
+| 0   | 0   | 0   | 1  |
+|-----+-----+-----+----|
+R = Rotation & scaling components.
+T = Translation components.
+
+_Camera/Projection Matrix (P)_
+|----+----+----+---+-----+-----+-----+----|
+| fx |  0 | cx |   | r11 | r12 | r13 | t1 |
+|  0 | fy | cy | * | r21 | r22 | r23 | t2 |
+|  0 |  0 | 1  |   | r31 | r32 | r33 | t3 |
+|----+----+----+---+-----+-----+-----+----|
+
+_Projection Matrix [K]_
+|----+----+----+---|
+| fx |  0 | cx | 0 |
+|  0 | fy | cy | 0 |
+|  0 |  0 | 1  | 0 |
+|----+----+----+---|
+fx,fy = Focal length
+cx,cy = Optical centers
+
+- To project a 3D-point 'P' onto the image plane, the point
+  is first transformed into the camera coordinate system using
+  the transformation matrix, and then projected onto the image-
+  plane using the projection matrix:
+P' = K * [R|t] * P
+p = (P' / P'[2])[:2]
+- Where *P'* is the transformed point in homogeneous coordinates,
+  and *p* is the projected point in pixel coordinates.
+
+** Code
+_1. Get the rotation/translation vector for detected object:_
+#+begin_src python
+  rvec, tvec, imgpts = ar.pose(frame, corners, ids, mtx, dist, flag)
+  ## rvec:              tvec:
+  [[1.89424736]      [[ -78.06884321]
+    [1.97708203]       [-140.11403877]
+    [0.45722938]]      [ 599.07793486]]
+#+end_src
+_2. Convert rotation vector to rotation matrix:_
+#+begin_src python
+  R, _ = cv.Rodrigues(rvec)
+  """
+    [[-0.03347331  0.88061339  0.47265167]
+    [ 0.99876063  0.04690274 -0.01665361]
+    [-0.03683405  0.47150843 -0.88109197]]
+  """
+#+end_src
+_3. Concatenate into Transformation Matrix_
+#+begin_src python
+  K = np.vstack((np.hstack((R, tvec.reshape(-1, 1))), [0, 0, 0, 1]))
+  # [[-3.31635078e-02  8.78192472e-01  4.77156330e-01 -7.78565692e+01]
+  #  [ 9.98733083e-01  4.71979860e-02 -1.74521913e-02 -1.39953343e+02]
+  #  [-3.78472008e-02  4.75973037e-01 -8.78645126e-01  5.97888194e+02]
+  #  [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  1.00000000e+00]]
+#+end_src
+
+* Results
+** Charuco
+| Charuco(NxM) | Distance(m) |   |
+|--------------+-------------+---|
+|          7x5 |         1.5 |   |
+|          4x3 |           2 |   |
+|          3x2 |         3.5 |   |
+|--------------+-------------+---|
+
+* Problems & Solutions
+** Windows refusing MJPEG
+*** Problem
+Windows being troublesome with capturing MJPEG compressed video
+from UVC USB cameras.
+*** Solution
+For some reason, you need to force-feed the VideoCapture instance
+with an additional reference to the MJPEG codec code:
+#+begin_src python
+  cap = cv.VideoCapture(0, cv.CAP_DSHOW)
+  cap.set(cv.CAP_PROP_FPS, 30.0)
+  cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('m','j','p','g'))
+  cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('M','J','P','G'))
+  cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
+  cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
+#+end_src
+*Ref*: https://www.kurokesu.com/main/2020/07/12/pulling-full-resolution-from-a-webcam-with-opencv-windows/
+** Calibration kluster**ck
+
+* In/Ex-matrix results:
+** Ex1:
+#+begin_src python
+  fx = mtx[0,0]
+  fy = mtx[1,1]
+  cx = mtx[0,2]
+  cy = mtx[1,2]
+
+  c_mtx = np.array([
+      [fx, 0, cx],
+      [0, fy, cy],
+      [0, 0, 1]])
+  intrinsics = (fx, fy, cx, cy)
+#+end_src
+_*intrinsics*_:
+(1140.03629835248, 1139.5381282646613, 970.9853781204586, 535.7179303057706)
+_*c_mtx*_:
+[[1.14003630e+03 0.00000000e+00 9.70985378e+02]
+ [0.00000000e+00 1.13953813e+03 5.35717930e+02]
+ [0.00000000e+00 0.00000000e+00 1.00000000e+00]]
+
+** Ex2:
+#+begin_src python
+  rvec, tvec, imgpts = ar.pose(frame, corners, ids, mtx, dist, flag)
+  #### Translate rotation vector to rotation matrix:
+  R, jacob = cv.Rodrigues(rvec)
+  #### Transform rotation matrix to extrinsic matrix and rewrite homogeneous:
+  K = np.vstack((np.hstack((R, tvec.reshape(-1, 1))), [0, 0, 0, 1]))
+#+end_src
+_*R*_:
+[[-0.03480713  0.87157214  0.48903013]
+ [ 0.99787841  0.05724814 -0.03100545]
+ [-0.05501955  0.48691339 -0.87171566]]
+_*jacob*_:
+[[ 0.37232761  0.28327397 -0.47836327  0.04354595 -0.61224561  0.27103743
+   0.5542376  -0.43507488 -0.27800084]
+ [-0.60834261  0.24835108 -0.48592209 -0.00347208  0.3563199   0.54616008
+   0.32188464 -0.48644078 -0.29202697]
+ [-0.14123247 -0.19123341  0.3307727   0.02719596 -0.14930999  0.59958962
+   0.58259585  0.35986159  0.1642362 ]]
+_*K*_:
+[[-3.48071267e-02  8.71572142e-01  4.89030127e-01 -4.17155977e+01]
+ [ 9.97878406e-01  5.72481359e-02 -3.10054522e-02 -1.24599702e+02]
+ [-5.50195516e-02  4.86913393e-01 -8.71715663e-01  6.83716178e+02]
+ [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  1.00000000e+00]]
+
+** Ex3:
+#+begin_src python
+  R, _ = cv.Rodrigues(rvecs)
+  ext = np.hstack((R, tvecs))
+  #Transformation matrix
+  MT = np.vstack((np.hstack((R, tvecs.reshape(-1, 1))), [0,0,0,1]))
+#+end_src
+_R_:
+[[-0.03662794  0.87217979  0.48781227]
+ [ 0.99756694  0.06088601 -0.03395717]
+ [-0.0593177   0.48538162 -0.87228785]]
+_ext_:
+[[-3.66279406e-02  8.72179787e-01  4.87812273e-01 -4.15060771e+01]
+ [ 9.97566943e-01  6.08860083e-02 -3.39571674e-02 -1.24156042e+02]
+ [-5.93176971e-02  4.85381616e-01 -8.72287852e-01  6.82760274e+02]]
+_MT_:
+[[-3.66279406e-02  8.72179787e-01  4.87812273e-01 -4.15060771e+01]
+ [ 9.97566943e-01  6.08860083e-02 -3.39571674e-02 -1.24156042e+02]
+ [-5.93176971e-02  4.85381616e-01 -8.72287852e-01  6.82760274e+02]
+ [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  1.00000000e+00]]
+** Ex4:
+#+begin_src python
+  Rt, _ = cv.Rodrigues(rvecs)
+  R = Rt.transpose()
+  pos = -R * tvecs
+  roll = atan2(R[2][1], R[2][2])
+  pitch = asin(R[2][0])
+  yaw = atan2(-R[1][0], R[0][0])
+  params = (roll, pitch, yaw)
+#+end_src
+_Rt_:
+[[-0.03475055  0.87020291  0.49146647]
+ [ 0.997755    0.05837818 -0.03281674]
+ [-0.05724814  0.48922273 -0.87027799]]
+_R_:
+[[-0.03475055  0.997755   -0.05724814]
+ [ 0.87020291  0.05837818  0.48922273]
+ [ 0.49146647 -0.03281674 -0.87027799]]
+_pos_:
+[[  -1.44596456   41.51641582   -2.38208556]
+ [ 108.1112915     7.25272325   60.77950355]
+ [-335.418683     22.39694714  593.95200758]]
+_params (roll, pitch, yaw)_:
+(-3.1039021662265758, 0.5137728153769026, -1.6107089691258343)
+
+** Ex5:
+
+#+begin_src python
+  ext_rot = cv.Rodrigues(rvecs)[0]
+  correction_mtx = np.zeros((4,4), dtype=np.float32)
+  correction_mtx[0,0] = 1.0
+  correction_mtx[0,1] = 0.0
+#+end_src
+_ext_rot_:
+[[-0.03662794  0.87217979  0.48781227]
+ [ 0.99756694  0.06088601 -0.03395717]
+ [-0.0593177   0.48538162 -0.87228785]]
+_correction_mtx_:
+[[1. 0. 0. 0.]
+ [0. 0. 0. 0.]
+ [0. 0. 0. 0.]
+ [0. 0. 0. 0.]]
+
+
+ # with open('calib.txt', 'r') as f:
+#     params = np.fromstring(f.readline(), dtype=np.float64, sep=' ')
+#    #  [718.856    0.     607.1928   0.       0.     718.856  185.2157   0.
+#    # 0.       0.       1.       0.    ]
+
+#     print("params: " + str(params) + "\n")
+#     P = np.reshape(params, (3, 4))
+#     # [[718.856    0.     607.1928   0.    ]
+#     #  [  0.     718.856  185.2157   0.    ]
+#     #  [  0.       0.       1.       0.    ]]
+
+
+#     print("P: " + str(P) + "\n")
+#     K = P[0:3, 0:3]
+#     # [[718.856    0.     607.1928]
+#     #  [  0.     718.856  185.2157]
+#     #  [  0.       0.       1.    ]]
+
+#     print("K: " + str(K) + "\n")
+#     #return K, P
+
+* Thesis Input
+** Coordinate systems
+pixel-coords (u,v)
+-> camera-coords (x_c, y_c)
+-> world-coords (X_w, Y_w, Z_w)

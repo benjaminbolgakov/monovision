@@ -1,0 +1,8 @@
+numpy==1.24.2
+scipy==1.10.1
+opencv-python==4.7.0.72
+matplotlib==3.7.1
+wheel==0.40.0
+PySDL2==0.9.15
+pysdl2-dll==2.26.5
+scikit-image==0.20.0

@@ -1,0 +1,22 @@
+# -*- mode: gitignore; -*-
+
+__pycache__
+*~
+
+venv/
+temp/
+legacy/
+bin/
+build/
+dist/
+lib/
+lib64/
+var/
+
+venv/
+legacy/
+calibration/set_homecam
+calibration/set_logitech
+
+pip-log.txt
+todo.org

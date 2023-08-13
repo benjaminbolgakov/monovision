@@ -1,0 +1,3 @@
+- Chessboard Properties:
+* dimensions = (N, M)
+* square size = x mm
