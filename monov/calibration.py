@@ -2,7 +2,7 @@ import cv2 as cv
 import glob
 import pickle
 import numpy as np
-from utils import *
+from ._utils import printer
 
 
 calib_log_file = "calib_log.txt"

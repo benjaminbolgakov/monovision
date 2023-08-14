@@ -91,7 +91,7 @@ class Odometry(object):
         Q2 = hom_Q2[:3, :] / hom_Q2[3, :]
         return [R_solved, t_solved]
 
-    def undistort(self, img):
+    #def undistort(self, img):
 
 
     @staticmethod

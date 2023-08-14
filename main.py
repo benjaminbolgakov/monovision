@@ -1,16 +1,24 @@
-import cv2
+
 import glob
 import sys
 import os
 #sys.path.append('src')
 
-from monovision.calibration import calibrate
-from camera import Camera
-from odometry import *
-from cap import Cap
-from aruco import Aruco
-from display import OverlayDisplay
-from slam import SLAM
+# from calibration import calibrate
+# from camera import Camera
+# from odometry import odometry
+# from cap import Cap
+# from aruco import Aruco
+# from display import OverlayDisplay
+# from slam import SLAM
+
+#from monovision import aruco, camera, calibration, cap, odometry, display, slam
+from monov import calibration
+from monov.camera import Camera
+from monov.cap import Cap
+from monov.aruco import Aruco
+from monov.display import OverlayDisplay
+from monov.slam import SLAM
 
 #calib_src = "calibration/set_logitech/results/calibration.pkl"
 calib_src = "calibration/set_homecam/results/calibration_homecam_1.pkl"
@@ -40,12 +48,10 @@ def aruco_vid_testing():
     while cap.is_open():
         ret, frame = cap.read()
         if ret:
-            frame = cv.resize(frame, resolution)
             markers, id_list = aruco.scan(frame, True)
             display.aruco_data(frame, markers, id_list)
-            cv.imshow('aruco_test', frame)
-            if cv.waitKey(25) == ord('q'):
-                break
+            cap.display('aruco_test', frame)
+
     cap.release()
 
 def aruco_feed_testing():
@@ -60,12 +66,10 @@ def aruco_feed_testing():
     while cap.is_open():
         ret, frame = cap.read()
         if ret:
-            frame = cv.resize(frame, resolution)
             markers, id_list = aruco.scan(frame, True)
             display.aruco_data(frame, markers, id_list)
-            cv.imshow('aruco_test', frame)
-            if cv.waitKey(25) == ord('q'):
-                break
+            cap.display('aruco_test', frame)
+
     cap.release()
 
 def slam_testing():
@@ -80,12 +84,10 @@ def slam_testing():
     while cap.is_open():
         ret, frame = cap.read()
         if ret:
-            frame = cv.resize(frame, resolution)
             #Start processing video
             slam.process_frame(frame)
-            cv.imshow('slam_test', frame)
-            if cv.waitKey(25) == ord('q'):
-                break
+            cap.display('slam_test', frame)
+
     cap.release()
 
 

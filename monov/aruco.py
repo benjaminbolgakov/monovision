@@ -1,9 +1,9 @@
 import cv2 as cv
 from cv2 import aruco
 import numpy as np
-from vision import Camera
+#from camera import Camera
 
-class Aruco(Camera):
+class Aruco(object):
     """
     - Sub Class of base class 'Camera'
     ===================================

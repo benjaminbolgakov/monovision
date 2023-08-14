@@ -4,11 +4,11 @@ import sys
 import cv2 as cv
 import numpy as np
 
-from extractor import Extractor
-from odometry import *
-from frame import Frame, match_frames, match_frames2
-from camera import Camera
-from pointmap import PointMap
+from monov.extractor import Extractor
+from monov.odometry import Odometry
+from monov.frame import Frame, match_frames, match_frames2
+from monov.camera import Camera
+from monov.pointmap import PointMap
 
 class SLAM(object):
     """

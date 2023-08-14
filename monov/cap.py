@@ -1,7 +1,7 @@
 import os
 import platform
 import cv2 as cv
-from utils import file_checker, fourcc_to_codec, get_backend_name
+from ._utils import file_checker, fourcc_to_codec, get_backend_name
 
 #VideoCapture backend identifiers
 backends = {
@@ -15,18 +15,19 @@ class Cap(object):
     TODO:
     1. Enable creating a VideoWriter with this class to enable
        recording the feed/video.
+    2. Move '.display' to display.py instead?
     """
-    def __init__(self, frame_size, vid_src=None, fps=30):
+    def __init__(self, resolution, vid_src=None, fps=30):
         """
         - Creates an OpenCV VideoCapture object and set's it's
           properties based on the current running OS.
         - If 'vid_src' is None the cap will operate from a
           live camera feed instead.
           ====================================================
-          frame_size = Resolution (W,H)
+          resolution = Resolution (W,H)
           vid_src = Video file to render using cap.
         """
-        self.frame_size = frame_size
+        self.resolution = resolution
         self.fps = fps
         self.os_ = platform.system()
         self.cap_api = self.config_api(self.os_)
@@ -44,7 +45,7 @@ class Cap(object):
             cap = cv.VideoCapture(vid_src, self.cap_api[1]) #FFMPEG (1900)
         #Setup cap properties based on current OS
         if cap.isOpened():
-            self.set_cap_props(cap, self.os_, self.frame_size, buffer_size)
+            self.set_cap_props(cap, self.os_, self.resolution, buffer_size)
             self.cap_w = cap.get(cv.CAP_PROP_FRAME_WIDTH)
             self.cap_h = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
         else:
@@ -68,8 +69,17 @@ class Cap(object):
                 fourcc = cv.VideoWriter_fourcc(*'XVID') #Is this optimal?
         #Validate file path and name
         f_path = file_checker(f_path, "monovision_video.avi")
-        recorder = cv.VideoWriter(f_path, fourcc, self.fps, self.frame_size)
+        recorder = cv.VideoWriter(f_path, fourcc, self.fps, self.resolution)
         return recorder
+
+    def display(self, window_name, frame):
+        try:
+            cv.resize(frame, self.resolution)
+            cv.imshow(window_name, frame)
+            if cv.waitKey(25) == ord('q'):
+
+        except TypeError:
+            print("Invalid window name")
 
 
     def config_api(self, os_):
@@ -92,7 +102,7 @@ class Cap(object):
 
         return (api_feed, api_stream)
 
-    def set_cap_props(self, cap, os_, frame_size, buffer_size):
+    def set_cap_props(self, cap, os_, resolution, buffer_size):
         """
         Applies required OS-specific props to the 'cap' object.
         *Logitech C930e: 1920x1080 @ 30fps*
@@ -105,7 +115,7 @@ class Cap(object):
         =======================================================================
         cap = VideoCapture object.
         os_ = Detected OS
-        frame_size = Frame resolution (W, H)
+        resolution = Frame resolution (W, H)
         buffer_size = Number of frames internal buffer can hold
         """
         # Define the codec for output video
@@ -121,11 +131,11 @@ class Cap(object):
         prop_set_results = [None for _ in range(4)]
         print(" *Attempting to configure system with the following properties:")
         print(" -FPS: %d \n -Resolution: %r \n -Buffer size: %d \n -Codec: MJPG \n" %
-              (self.fps, frame_size, buffer_size))
+              (self.fps, resolution, buffer_size))
         #Try setting props
         prop_set_results[0] = cap.set(cv.CAP_PROP_FPS, self.fps)
-        prop_set_results[1] = cap.set(cv.CAP_PROP_FRAME_WIDTH, frame_size[0])
-        prop_set_results[2] = cap.set(cv.CAP_PROP_FRAME_HEIGHT, frame_size[1])
+        prop_set_results[1] = cap.set(cv.CAP_PROP_FRAME_WIDTH, resolution[0])
+        prop_set_results[2] = cap.set(cv.CAP_PROP_FRAME_HEIGHT, resolution[1])
         prop_set_results[3] = cap.set(cv.CAP_PROP_BUFFERSIZE, buffer_size)
         #Insert descriptors of prop results: ["fps", False] etc..
         for prop in prop_set_results:
@@ -166,7 +176,7 @@ class Cap(object):
         """
         print("System Information: \n")
         print("OS: ", self.os_, "\n")
-        print("Frame Size: ", self.frame_size)
+        print("Frame Size: ", self.resolution)
 
 
     def is_open(self):
