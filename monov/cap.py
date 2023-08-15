@@ -77,7 +77,9 @@ class Cap(object):
             cv.resize(frame, self.resolution)
             cv.imshow(window_name, frame)
             if cv.waitKey(25) == ord('q'):
-
+                return False
+            else:
+                return True
         except TypeError:
             print("Invalid window name")
 

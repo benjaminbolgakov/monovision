@@ -68,7 +68,9 @@ def aruco_feed_testing():
         if ret:
             markers, id_list = aruco.scan(frame, True)
             display.aruco_data(frame, markers, id_list)
-            cap.display('aruco_test', frame)
+            running = cap.display('aruco_test', frame)
+            if not running:
+                break
 
     cap.release()
 
