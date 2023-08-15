@@ -1,4 +1,4 @@
-
+import cv2 as cv
 import glob
 import sys
 import os
@@ -92,8 +92,60 @@ def slam_testing():
 
     cap.release()
 
+def record_video():
+    W, H = 1920, 1080
+    resolution = (W, H)
+    cap = Cap(resolution)
+    recorder = cap.create_recorder("test_sample")
+    while cap.is_open():
+        ret, frame = cap.read()
+        if ret:
+            cv.imshow('recording', frame)
+            recorder.write(frame)
+            if cv.waitKey(25) == ord('q'):
+                break
+
+    cap.release()
+    recorder.release()
+    cv.destroyAllWindows()
+
+def capture_photo():
+    W, H = 1920, 1080
+    resolution = (W, H)
+    cap = Cap(resolution)
+    while cap.is_open():
+        ret, frame = cap.read()
+        if ret:
+            cv.imshow('recording', frame)
+            if cv.waitKey(25) == ord('b'):
+                cv.imwrite('sample', frame)
+            if cv.waitKey(25) == ord('q'):
+                break
+
+    cap.release()
+    recorder.release()
+    cv.destroyAllWindows()
+
+# def fcheck(f_name):
+#     f_name = f_name
+#     f_ext = '.avi'
+#     f_dir = "./"
+#     f_path = f_dir + f_name + f_ext
+#     ct = 1
+#     write = False
+#     while not write:
+#         if os.path.exists(f_path):
+#             f_path = f_dir + f_name + str(ct) + f_ext
+#             print("Busy: " + str(f_path))
+#             ct += 1
+#         else:
+#             write = True
+#             print("Free: " + str(f_path))
+
 
 if __name__ == "__main__":
     #calibrate_camera()
-    aruco_feed_testing() #70cm
+    #aruco_feed_testing() #70cm
     #slam_testing()
+    record_video()
+    #fcheck("test_sample")

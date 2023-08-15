@@ -53,22 +53,28 @@ class Cap(object):
         print("CAP: " + str(cap))
         return cap
 
-    def create_recorder(self, f_path):
+    def create_recorder(self, f_name, f_path=None):
         """
         - Creates a VideoWriter object based on current running OS.
         TODO:
         1. In case '_', is XVID optimal?
         """
         #Set compression codec based on OS
-        match os_:
+        match self.os_:
             case "Windows":
                 fourcc = cv.VideoWriter_fourcc(*'MJPG')
+                f_ext = '.mp4'
             case "Linux":
                 fourcc = cv.VideoWriter_fourcc(*'XVID')
+                f_ext = '.avi'
             case _:
                 fourcc = cv.VideoWriter_fourcc(*'XVID') #Is this optimal?
+                f_ext = '.avi'
         #Validate file path and name
-        f_path = file_checker(f_path, "monovision_video.avi")
+        if f_path is None:
+            f_path = file_checker("./", f_name, f_ext)
+        else:
+            f_path = file_checker(f_path, f_name, f_ext)
         recorder = cv.VideoWriter(f_path, fourcc, self.fps, self.resolution)
         return recorder
 

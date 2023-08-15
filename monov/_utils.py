@@ -61,15 +61,15 @@ def write_calibration(output_src, ret, mtx, dist, rvecs, tvecs, mtx_n):
     with open(f_full, 'wb') as f:
         pickle.dump((ret, mtx, dist, rvecs, tvecs, mtx_n), f)
 
-def file_checker(f_path, f_name):
+def file_checker(fdir, fname, fext):
+    fpath = fdir + fname + fext
     ct = 1
     write = False
-    f_full = f_path + f_name
     while not write:
-        if os.path.exists(f_full):
-            f_full = f_path + str(ct) + f_name
+        if os.path.exists(fpath):
+            fpath = fdir + fname + str(ct) + fext
             ct += 1
         else:
             write = True
-            print("Wrote file as: " + str(f_full) + "\n")
-    return f_full
+            print("Writing to file as: " + str(fpath) + "\n")
+    return fpath
