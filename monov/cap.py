@@ -89,6 +89,13 @@ class Cap(object):
         except TypeError:
             print("Invalid window name")
 
+    def capture_img(self, frame, fdir=None, fname=None):
+        fdir = "./" if fdir is None else fdir
+        fname = "capture" if fname is None else fname
+        fext = ".png"
+        fpath = file_checker(fdir, fname, fext)
+        cv.imwrite(fpath, frame)
+        print("Write image capture as: " + str(fpath))
 
     def config_api(self, os_):
         """
