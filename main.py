@@ -17,6 +17,7 @@ from monov import calibration
 from monov.camera import Camera
 from monov.cap import Cap
 from monov.aruco import Aruco
+from monov.odometry import Odometry
 from monov.display import OverlayDisplay
 from monov.slam import SLAM
 
@@ -67,26 +68,6 @@ def calibrate_camera():
     calibrate(calib_img_src, valid_img_src, resolution, square_size, board, output_src)
 
 
-def aruco_vid_testing():
-    #vid_src = "media/vids/min_dist_zone.avi"
-    vid_src = "../Videos/gray_comp.avi"
-    marker_size = 156 # aruco marker size (mm)
-    resolution = (1920, 1080)
-    #resolution = (640, 480)
-    camera = Camera(resolution, calib_src)
-    odo = Odometry(resolution)
-    cap = Cap(resolution, vid_src)
-    aruco = Aruco(camera, marker_size)
-    display = OverlayDisplay(resolution)
-    #Begin process video
-    while cap.is_open():
-        ret, frame = cap.read()
-        if ret:
-            markers, id_list = aruco.scan(frame, True)
-            display.aruco_data(frame, markers, id_list)
-            cap.display('aruco_test', frame)
-
-    cap.release()
 
 def aruco_feed_testing():
     marker_size = 156 # aruco marker size (mm)
@@ -127,11 +108,30 @@ def slam_testing():
     cap.release()
 
 
+def aruco_vid_testing():
+    vid_src = "media/test_vid.avi"
+    marker_size = 156 # aruco marker size (mm)
+    resolution = (1920, 1080)
+    camera = Camera(resolution, calib_src)
+    #odo = Odometry(resolution)
+    cap = Cap(resolution, vid_src)
+    aruco = Aruco(camera, marker_size)
+    display = OverlayDisplay(resolution)
+    #Begin process video
+    while cap.is_open():
+        ret, frame = cap.read()
+        if ret:
+            markers, id_list = aruco.scan(frame, True) # [ [id, distance, bearing], ..] ]
+            print(markers)
+            display.aruco_data(frame, markers, id_list)
+            cap.display('aruco_test', frame)
 
+    cap.release()
 
 if __name__ == "__main__":
     #calibrate_camera()
-    aruco_feed_testing() #70cm
+    #aruco_feed_testing() #70cm
+    aruco_vid_testing() #70cm
     #slam_testing()
     #record_video()
     #capture_photo()

@@ -33,6 +33,7 @@ class Cap(object):
         self.cap_api = self.config_api(self.os_)
         self.cap = self.create_cap(vid_src)
         self.cap_w, self.cap_h = self.get_resolution()
+        self.setup = [] #Requested cap-configuration [ [props], [api] ]
 
     def create_cap(self, vid_src, cam_id=0, buffer_size=4):
         """
@@ -160,7 +161,18 @@ class Cap(object):
                 print("Succeded setting prop")
         self.print_cap_props(cap)
 
-    def get_cap_props(self, cap):
+    def get_props(self):
+        fps = self.cap.get(cv.CAP_PROP_FPS)
+        width = self.cap.get(cv.CAP_PROP_FRAME_WIDTH)
+        height = self.cap.get(cv.CAP_PROP_FRAME_HEIGHT)
+        buffer_size = self.cap.get(cv.CAP_PROP_BUFFERSIZE)
+        fourcc = fourcc_to_codec(self.cap.get(cv.CAP_PROP_FOURCC))
+        backend = get_backend_name(self.cap.get(cv.CAP_PROP_BACKEND))
+        resolution = (width, height)
+        return (fps, resolution, buffer_size, fourcc, backend)
+
+    @staticmethod
+    def get_cap_props(cap):
         fps = cap.get(cv.CAP_PROP_FPS)
         width = cap.get(cv.CAP_PROP_FRAME_WIDTH)
         height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
