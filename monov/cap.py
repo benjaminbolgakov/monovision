@@ -17,7 +17,7 @@ class Cap(object):
        recording the feed/video.
     2. Move '.display' to display.py instead?
     """
-    def __init__(self, resolution, vid_src=None, fps=30):
+    def __init__(self, resolution, vid_src=None, fps=30, prop_gui=False):
         """
         - Creates an OpenCV VideoCapture object and set's it's
           properties based on the current running OS.
@@ -29,6 +29,7 @@ class Cap(object):
         """
         self.resolution = resolution
         self.fps = fps
+        self.prop_gui = prop_gui
         self.os_ = platform.system()
         self.cap_api = self.config_api(self.os_)
         self.cap = self.create_cap(vid_src)
@@ -134,6 +135,11 @@ class Cap(object):
         resolution = Frame resolution (W, H)
         buffer_size = Number of frames internal buffer can hold
         """
+        # Enable camera settings GUI if instructed
+        if self.prop_gui:
+            print("Opening prop settings")
+            cap.set(cv.CAP_PROP_SETTINGS, 1)
+
         # Define the codec for output video
         if self.os_ == 'Windows': #fourcc = FFMPEG or MSWF or DSHOW
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('m','j','p','g'))
@@ -143,17 +149,17 @@ class Cap(object):
         else:
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
-        #Empty list for the results of setting props
+        # Empty list for the results of setting props
         prop_set_results = [None for _ in range(4)]
         print(" *Attempting to configure system with the following properties:")
         print(" -FPS: %d \n -Resolution: %r \n -Buffer size: %d \n -Codec: MJPG \n" %
               (self.fps, resolution, buffer_size))
-        #Try setting props
+        # Try setting props
         prop_set_results[0] = cap.set(cv.CAP_PROP_FPS, self.fps)
         prop_set_results[1] = cap.set(cv.CAP_PROP_FRAME_WIDTH, resolution[0])
         prop_set_results[2] = cap.set(cv.CAP_PROP_FRAME_HEIGHT, resolution[1])
         prop_set_results[3] = cap.set(cv.CAP_PROP_BUFFERSIZE, buffer_size)
-        #Insert descriptors of prop results: ["fps", False] etc..
+        # Insert descriptors of prop results: ["fps", False] etc..
         for prop in prop_set_results:
             if prop == False:
                 print("Failed setting prop")
