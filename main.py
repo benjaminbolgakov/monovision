@@ -1,7 +1,12 @@
+"""
+TODO:
+- Test configuration input: ensure numerical input for marker size etc ..
+"""
 import cv2 as cv
 import glob
 import sys
 import os
+import json
 #sys.path.append('src')
 
 # from calibration import calibrate
@@ -21,117 +26,105 @@ from monov.odometry import Odometry
 from monov.display import OverlayDisplay
 from monov.slam import SLAM
 
+import programs.calibratecamera
+import programs.camerafeed
+import programs.capturephoto
+import programs.recordvideo
+import programs.slamvideo
+import programs.videosource
+
 #calib_src = "calibration/set_logitech/results/calibration.pkl"
-calib_src = "calibration/set_homecam/results/calibration_homecam_1.pkl"
+calib_src = "calibration/set_example/results/calibration_example.pkl"
 
+def configure_calibration():
+    print("1. Calibration\n")
+    print("- Calibrations are stored in the 'calibration' directory.\n")
+    while True:
+        calib_input = input("Path to calibration file: calibration/")
+        calib_src = "calibration/" + calib_input
+        file_verified = os.path.isfile(calib_src)
+        if file_verified:
+            break
+        else:
+            print("File not found! Try again.\n")
+    return calib_src
 
-def record_video():
-    W, H = 1920, 1080
-    resolution = (W, H)
-    cap = Cap(resolution)
-    recorder = cap.create_recorder("test_sample")
-    while cap.is_open():
-        ret, frame = cap.read()
-        if ret:
-            cv.imshow('recording', frame)
-            recorder.write(frame)
-            if cv.waitKey(25) == ord('q'):
-                break
+def configure_resolution():
+    print("2. Camera resolution\n")
+    #print("- Acceptable resolutions(WxH): 1920x1080 720x480 todo..\n")
+    w = int(input("W: "))
+    h = int(input("H: "))
+    return (w,h)
 
-    cap.release()
-    recorder.release()
-    cv.destroyAllWindows()
+def configure_markersize():
+    print("3. Marker size\n")
+    print("- Aruco marker size refers to the length of the squares consisting in the marker, in millimeters.\n")
+    marker_size = int(input("Marker size(mm): "))
+    return marker_size
 
-def capture_photo():
-    W, H = 1920, 1080
-    resolution = (W, H)
-    cap = Cap(resolution)
-    while cap.is_open():
-        ret, frame = cap.read()
-        if ret:
-            cv.imshow('photo_capture', frame)
-            if cv.waitKey(25) == ord('b'):
-                cap.capture_img(frame)
-            if cv.waitKey(25) == ord('q'):
-                break
+def configure():
+    config = {}
+    config["calibration_file"] = configure_calibration()
+    config["camera_resolution"] = configure_resolution()
+    config["marker_size"] = configure_markersize()
+    # Write configuration to file
+    with open('config.json', 'w') as fp:
+        json.dump(config, fp)
 
-    cap.release()
-    cv.destroyAllWindows()
-
-def calibrate_camera():
-    calib_img_src = glob.glob("calibration/set_homecam/src/*")
-    valid_img_src = glob.glob("calibration/set_homecam/validation/*")
-    output_src = "calibration/set_homecam/results/"
-    square_size = 20 # chessboard square size (mm)
-    board = (8,5) # chessboard dimensions
-    resolution = (1920, 1080)
-    calibrate(calib_img_src, valid_img_src, resolution, square_size, board, output_src)
-
-
-
-def aruco_feed_testing():
-    marker_size = 156 # aruco marker size (mm)
-    resolution = (1920, 1080)
-    camera = Camera(resolution, calib_src)
-    #odo = Odometry(resolution)
-    cap = Cap(resolution)
-    aruco = Aruco(camera, marker_size)
-    display = OverlayDisplay(resolution)
-    #Begin process video
-    while cap.is_open():
-        ret, frame = cap.read()
-        if ret:
-            markers, id_list = aruco.scan(frame, True)
-            display.aruco_data(frame, markers, id_list)
-            running = cap.display('aruco_test', frame)
-            if not running:
-                break
-
-    cap.release()
-
-def slam_testing():
-    # vid_src = "../Videos/gray_comp.avi" # Laptop source
-    vid_src = "../Videos/monovision/lab_gray/gray_comp.avi"
-    W, H = 1920, 1080
-    resolution = (W, H)
-    camera = Camera(resolution, calib_src)
-    #odo = Odometry(camera)
-    cap = Cap(resolution, vid_src)
-    slam = SLAM(camera)
-    while cap.is_open():
-        ret, frame = cap.read()
-        if ret:
-            #Start processing video
-            slam.process_frame(frame)
-            cap.display('slam_test', frame)
-
-    cap.release()
-
-
-def aruco_vid_testing():
-    vid_src = "media/test_vid.avi"
-    marker_size = 156 # aruco marker size (mm)
-    resolution = (1920, 1080)
-    camera = Camera(resolution, calib_src)
-    #odo = Odometry(resolution)
-    cap = Cap(resolution, vid_src)
-    aruco = Aruco(camera, marker_size)
-    display = OverlayDisplay(resolution)
-    #Begin process video
-    while cap.is_open():
-        ret, frame = cap.read()
-        if ret:
-            markers, id_list = aruco.scan(frame, True) # [ [id, distance, bearing], ..] ]
-            print(markers)
-            display.aruco_data(frame, markers, id_list)
-            cap.display('aruco_test', frame)
-
-    cap.release()
+def print_current_config():
+    with open('config.json') as conf_file:
+        config = json.load(conf_file)
+    print("\n=Current configuration=")
+    print(f"Calibration file: {config["calibration_file"]}")
+    print(f"Camera resolution: {config["camera_resolution"][0]}x{config["camera_resolution"][1]}")
+    print(f"Marker size: {config["marker_size"]}mm\n")
+    return config
 
 if __name__ == "__main__":
-    #calibrate_camera()
-    #aruco_feed_testing() #70cm
-    aruco_vid_testing() #70cm
-    #slam_testing()
-    #record_video()
-    #capture_photo()
+    # Check for existing configuration file
+    config_exists = os.path.isfile('config.json')
+    config = {}
+    if config_exists:
+        config = print_current_config()
+    else:
+        print("\nNote: No existing configuration file (config.json) found.")
+        print("      Create one with option '7) Configure'\n")
+
+    #### Program start ####
+    while True:
+        choice = input("1) Calibrate camera\n"
+                        "2) Camera feed\n"
+                        "3) Pre-recorded video\n"
+                        "4) SLAM\n"
+                        "5) Record video\n"
+                        "6) Capture photo\n"
+                        "7) Configure\n"
+                        "q) Exit\n\nSelect: ")
+        os.system('cls')
+        if choice == '1':
+            print("==== Camera Calibration ====")
+            programs.calibratecamera.calibrate_camera()
+        elif choice == '2':
+            print("==== Camera Feed ====")
+            programs.camerafeed.camera_feed(config)
+        elif choice == '3':
+            print("==== Pre-recorded Video ====")
+            programs.videosource.video_source(config)
+            # aruco_vid_testing()
+        elif choice == '4':
+            print("==== SLAM ====")
+            # slam_testing()
+            programs.slamvideo.slam_video(config)
+        elif choice == '5':
+            print("==== Record Video ====")
+            programs.recordvideo.record_video()
+        elif choice == '6':
+            print("==== Capture Photo ====")
+            programs.capturephoto.capture_photo()
+        elif choice == '7':
+            configure()
+            print("==== Configuration Wizard ====")
+        elif choice == 'q':
+            break
+        else:
+            print("Enter a valid choice")

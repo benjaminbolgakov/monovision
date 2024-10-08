@@ -15,8 +15,8 @@ var/
 
 venv/
 legacy/
-calibration/set_homecam
-calibration/set_logitech
+calibration/
 
 pip-log.txt
 todo.org
+config.json
