@@ -1013,3 +1013,6 @@ _correction_mtx_:
 pixel-coords (u,v)
 -> camera-coords (x_c, y_c)
 -> world-coords (X_w, Y_w, Z_w)
+* References
+https://youtu.be/7Hlb8YX2-W8
+https://www.youtube.com/watch?v=Oo9SsIvyxZA
