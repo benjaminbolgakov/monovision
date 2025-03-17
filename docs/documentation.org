@@ -1014,5 +1014,35 @@ pixel-coords (u,v)
 -> camera-coords (x_c, y_c)
 -> world-coords (X_w, Y_w, Z_w)
 * References
+https://www.classes.cs.uchicago.edu/archive/2022/fall/20600-1/particle_filter_project.html#description
+http://ais.informatik.uni-freiburg.de/teaching/ws13/mapping/pdf/slam12-fastslam-4.pdf
+https://docs.opencv.org/4.7.0/d9/d0c/group__calib3d.html#ga4abc2ece9fab9398f2e560d53c8c9780
+https://docs.opencv.org/4.7.0/d9/d0c/group__calib3d.html#gaaae5a7899faa1ffdf268cd9088940248
+https://docs.opencv.org/3.4/d4/d2c/group__videostab__motion.html
+https://docs.opencv.org/4.7.0/d9/d0c/group__calib3d.html#gad767faff73e9cbd8b9d92b955b50062d
+https://github.com/filchy/slam-python/blob/master/extractor.py
+https://learnopencv.com/the-complete-guide-to-object-tracking-in-computer-vision/
+https://www.ri.cmu.edu/pub_files/pub4/montemerlo_michael_2003_1/montemerlo_michael_2003_1.pdf
+https://www.cvl.isy.liu.se/education/undergraduate/tsbb15/
+https://www.cvl.isy.liu.se/education/undergraduate/tsbb19/
+https://www.cvl.isy.liu.se/education/undergraduate/tsbb21/lectures/
+https://gitlab.liu.se/cvl/tsbb19/course-material/-/tree/main
+https://www.cvl.isy.liu.se/education/undergraduate/tsbb21/lectures/
+https://atsushisakai.github.io/PythonRobotics/modules/slam/FastSLAM1/FastSLAM1.html
+https://github.com/yahsiuhsieh/particle-filter-slam/blob/master/src/motion_utils.py
+https://github.com/yahsiuhsieh/particle-filter-slam/tree/master
+https://stackoverflow.com/questions/71813708/creating-augmented-reality-using-python-opencv-and-slam
+https://docs.opencv.org/3.4/dc/dfb/group__datasets__slam.html
+https://ltslam-doc.readthedocs.io/en/latest/tutorial/opencv/opencv_tutorial.html
+http://avisingh599.github.io/vision/monocular-vo/
+https://docs.opencv.org/4.7.0/dc/d2c/tutorial_real_time_pose.html
+https://www.youtube.com/watch?v=N451VeA8XRA&ab_channel=NicolaiNielsen
+https://github.com/niconielsen32/ComputerVision/blob/master/visual_odometry.py
+https://github.com/alishobeiri/Monocular-Video-Odometery/tree/master
+https://github.com/yahsiuhsieh/particle-filter-slam
+https://pypi.org/project/pfilter/
+https://github.com/nchopin/particles
+https://github.com/rlabbe/filterpy
 https://youtu.be/7Hlb8YX2-W8
 https://www.youtube.com/watch?v=Oo9SsIvyxZA
+https://github.com/MRPT/mrpt
