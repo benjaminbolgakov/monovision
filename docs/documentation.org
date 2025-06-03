@@ -1,4 +1,15 @@
 * Outline
+** Scope
+- _General Computer Vision suite_
+  + Camera calibration
+  + Aruco detection/classification
+  + Pose estimation - heading etc
+  + SLAM
+  + Facial detection
+  + And more ...
+
+- A 'main menu' selecting which program to run.
+
 ** Libraries/Tools
 |-----------------------+----------|
 | *Library*             |  Version |
