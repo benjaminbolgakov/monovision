@@ -1,3 +1,4 @@
+#+STARTUP: fold
 * Outline
 ** Scope
 - _General Computer Vision suite_
@@ -31,7 +32,6 @@ https://github.com/dfki-ric/pytransform3d
 ** Image Plane
 
 ** Pixel Coordinates
-
 
 ** Egomotion
 Egomotion is defined as the 3D motion of a camera within
@@ -243,6 +243,232 @@ _6. Loop:_
    with RANSAC. *(Maybe only applicable for stereo?)*
 4. Then the active points are transformed and merged into
    a PCL point-cloud. *(Maybe only applicable for stereo?)*
+* Keyframe Data
+1. _Pose Estimate (Camera Pose)_
+   + A pose consists of 3D coordinates[x,y,z] of the camera, as well
+     as the orientation/rotation of the camera, represented by a
+     rotation matrix.
+   + By identifying and tracking visual features, like corners and
+     edges, epipolar geometry and triangulation can be used to estimate
+     the relative motion between frames.
+   + Tools that can be used:
+     + _PnP (Perspective-n-Point)_: Estimates camera pose given 3D points
+       and their 2D projections.
+     + _Essential Matrix_: Encodes the relative rotation and translation
+       between two frames.
+   + Illustration: [[./assets/pose-estimation.png]]
+
+2. _Feature Keypoints_
+   + 2D coordinates of detected keypoints[ORB].
+   + Used for: tracking correspondences, triangulating 3D points and
+     reprojecting 3D landmarks.
+   + Keypoints consists of descriptors, which is needed for feature
+     matching between keyframes, place recognition and loop closure
+     detection.
+
+3. _3D Map Point Associations_
+   + Links between 2D keypoints in a keyframe and corresponding
+     3D landmarks in the global map.
+   + Essential for: Reprojection error calculation, bundle adjustment
+     and for maintaining map structure.
+
+4. _Camera Intrinsics_
+   + Parameters used for projection: Focal length, principal point and
+     distortion coefficients.
+   + Needed to project 3D points back into image space.
+
+5. _Timestamp_
+   + Required for tracking, syncing with other possible data and
+     log consistency.
+
+* KVS Integration
+** Application Cases
+*** Storing Keyframe Data
+- _Usefulness_: *[moderate]*
+  + Helps with offline debugging, relocalization and loop
+    closure if coupled with good frame-indexing logic.
+  + Persistance.
+
+- _Performance Gain_: *[low]*
+
+- _Implementation_: *[easy]*
+  + Straight serialization of Keyframe attributes.
+
+*** Storing Pose Graph Nodes/Edges - Graph-based SLAM
+- _Usefulness_: *[high]*
+  + Especially in back-end optimization and large map
+    merging scenarios.
+  + Enables fast pose retrieval and map consistency validation.
+
+- _Performance Gain_: *[high]*
+  + Particularly in large environments or when optimizing offline.
+
+- _Implementation_: *[moderate]*
+  + Requires careful structuring of graph data (edges, constraints)
+    in KVS.
+
+*** Caching Reprojected Map Points - Depth
+- _Usefulness_: *[high]*
+  + Particularly for monocular SLAM lacking direct depth info.
+  + Can cache triangulated points or multi-view matches for re-use.
+
+- _Performance Gain_: *[high]*
+  + Expensive triangulation/matching can be skipped if cached.
+
+- _Implementation_: *[hard]*
+  + Requires synchronization with bundle adjustment and map
+    management logic.
+
+- _Basic Redis Example_:
+  #+begin_src python
+    import redis
+    import pickle
+    r = redis.Redis()
+    keyframe_data = {"pose": [1.2, 3.4, 0.5], "image": b"..."}
+    r.set("keyframe_42", pickle.dumps(keyframe_data))
+  #+end_src
+
+*** Fast Keyframe Retrieval For Loop Closure
+- _Usefulness_: *[very high]*
+  + Given the SLAM pipeline includes loop closure or place recognition.
+
+- _Performance Gain_: *[very high]*
+  + Given it's integrated with a fast place-recognition front-end or
+    BoW database.
+
+- _Implementation_: *[moderate]*
+  + Especially if using descriptor-based indexing or embedding trees.
+
+*** Persistent Map Storage
+- _Usefulness_: *[moderate]*
+  + Mostly for long-term SLAM (e.g robotics) where persistence matter.
+
+- _Performance Gain_: *[low]*
+  + Mostly for productivity.
+
+- _Implementation_: *[easy]*
+  + Serialize poses, descriptors and map points.
+
+** Optional Enhancements
+*** Store Numpy Arrays Efficiently
+- _For performance, avoid JSON and instead store_:
+  + Raw bytes [np.ndarray.tobytes()]
+  + Structured binary format [e.g, np.save to buffer]
+
+*** Async Or Queue-Based Logging
+- _Mitigates latency_:
+  + Batch writes to the KVS using backround threads.
+
+*** LRU Eviction
+- Keep a linked list of frames and move-to-front on each hit.
+** Example Structure
+kvstore/
+├── main.c          # Main loop and CLI
+├── hashtable.c     # Your hash table implementation
+├── hashtable.h     # Hash table header
+└── Makefile        # For building
+
+** Usage
+*** Basic
+- _General syntax_:
+  > PUT <key> <value>
+  OK
+  > GET <key>
+  <value>
+- _Example_:
+  > PUT foo bar
+  OK
+  > GET foo
+  bar
+
+*** Caching of Map Data and/or Keyframes *[SLAM]*
+*Ref*: [[https://chatgpt.com/share/68415b85-facc-8002-843b-050fee074a2f\\][chatgpt]]
+**** Keyframe Data
+1. _Pose Estimate (Camera Pose)_
+   + A pose consists of 3D coordinates[x,y,z] of the camera, as well
+     as the orientation/rotation of the camera, represented by a
+     rotation matrix.
+   + By identifying and tracking visual features, like corners and
+     edges, epipolar geometry and triangulation can be used to estimate
+     the relative motion between frames.
+   + Tools that can be used:
+     + _PnP (Perspective-n-Point)_: Estimates camera pose given 3D points
+       and their 2D projections.
+     + _Essential Matrix_: Encodes the relative rotation and translation
+       between two frames.
+   + Illustration: [[./assets/pose-estimation.png]]
+
+2. _Feature Keypoints_
+   + 2D coordinates of detected keypoints[ORB].
+   + Used for: tracking correspondences, triangulating 3D points and
+     reprojecting 3D landmarks.
+   + Keypoints consists of descriptors, which is needed for feature
+     matching between keyframes, place recognition and loop closure
+     detection.
+
+3. _3D Map Point Associations_
+   + Links between 2D keypoints in a keyframe and corresponding
+     3D landmarks in the global map.
+   + Essential for: Reprojection error calculation, bundle adjustment
+     and for maintaining map structure.
+
+4. _Camera Intrinsics_
+   + Parameters used for projection: Focal length, principal point and
+     distortion coefficients.
+   + Needed to project 3D points back into image space.
+
+5. _Timestamp_
+   + Required for tracking, syncing with other possible data and
+     log consistency.
+
+**** Example Keyframe Datastructure
+#+begin_src c++
+struct Keyframe {
+    int id;
+    double timestamp;
+
+    // Pose
+    Eigen::Matrix4d pose; // SE(3) transformation
+
+    // Features
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+
+    // Map point associations
+    std::vector<MapPoint*> associatedMapPoints;
+
+    // Camera model
+    CameraIntrinsics intrinsics;
+
+    // Optional
+    cv::Mat imagePyramid[NUM_LEVELS]; // Optional
+    BoWVector bowVector; // For place recognition
+};
+#+end_src
+**** Key Considerations
+- _No Depth Data_:
+  + Monocular vision disables depth data. Instead, triangulation of
+    keypoints is used. Storing reliable keypoint matches is therefor
+    of critical importance.
+
+- _Scale Ambiguity_
+  + All pose estimates and 3D points are up to an arbritary scale,
+    be consistent.
+
+- _Relocalization_
+  + Keyframes are the basis for recovering from tracking loss, so
+    the richer the data, the more robust it is.
+
+** References
+[[https://build-your-own.org/redis/03_hello_cs][DIY_REDIS]]
+[[https://medium.com/@sakalli.duran/crafting-a-key-value-store-designing-a-hash-table-4a1565329efb][crafting_kvs_hashtable]]
+[[https://dev.to/ravikishan/from-theory-to-practice-developing-a-distributed-key-value-database-with-sharding-and-replication-180d][distributed_kvs]]
+[[https://blog.algomaster.io/p/designing-a-distributed-key-value-store][designing_distributed_kvs]]
+[[https://dev.to/dtxcode/distributed-key-value-store-in-c-c-from-scratch-2j7b][distributed_kvs_c_cpp_from_scratch]]
+[[https://github.com/move47/Distributed-Key-Value-Store][distributed_kvs_github]]
+[[https://github.com/andy-byers/CalicoDB/tree/main/src][caliodb_example_project]]
+[[https://github.com/chxdeng/mabain][mabain_example_project]]
+[[https://jacklinweb.github.io/posts/key-value-storage/][kvs_implementation_C]]
 * Particle Filter
 Multiple particles/samples represent arbitrary distributions.
 Every sample contain a 'weight'/'probability-mass'. Higher weight
@@ -1057,200 +1283,3 @@ https://github.com/rlabbe/filterpy
 https://youtu.be/7Hlb8YX2-W8
 https://www.youtube.com/watch?v=Oo9SsIvyxZA
 https://github.com/MRPT/mrpt
-
-
-
-
-
-* KVS Integration
-** Application Cases
-*** Storing Keyframe Data
-- _Usefulness_: *[moderate]*
-  + Helps with offline debugging, relocalization and loop
-    closure if coupled with good frame-indexing logic.
-  + Persistance.
-
-- _Performance Gain_: *[low]*
-
-- _Implementation_: *[easy]*
-  + Straight serialization of Keyframe attributes.
-
-*** Storing Pose Graph Nodes/Edges - Graph-based SLAM
-- _Usefulness_: *[high]*
-  + Especially in back-end optimization and large map
-    merging scenarios.
-  + Enables fast pose retrieval and map consistency validation.
-
-- _Performance Gain_: *[high]*
-  + Particularly in large environments or when optimizing offline.
-
-- _Implementation_: *[moderate]*
-  + Requires careful structuring of graph data (edges, constraints)
-    in KVS.
-
-*** Caching Reprojected Map Points - Depth
-- _Usefulness_: *[high]*
-  + Particularly for monocular SLAM lacking direct depth info.
-  + Can cache triangulated points or multi-view matches for re-use.
-
-- _Performance Gain_: *[high]*
-  + Expensive triangulation/matching can be skipped if cached.
-
-- _Implementation_: *[high]*
-  + Requires synchronization with bundle adjustment and map
-    management logic.
-
-*** Fast Keyframe Retrieval For Loop Closure
-- _Usefulness_: *[]*
-
-- _Performance Gain_: *[]*
-
-- _Implementation_: *[]*
-
-
-
-
-
-
-- _Usefulness_: *[]*
-
-- _Performance Gain_: *[]*
-
-- _Implementation_: *[]*
-
-** Possible SLAM integrations
-- _Caching Map Data and Keyframes_:
-  + SLAM algorithms generate and update maps in real time. A KVS
-    can store intermediate map representations, keyframes and
-    transformations for fast retrieval.
-  + *E.G - using Redis*:
-    #+begin_src python
-      import redis
-      import pickle
-      r = redis.Redis()
-      keyframe_data = {"pose": [1.2, 3.4, 0.5], "image": b"..."}
-      r.set("keyframe_42", pickle.dumps(keyframe_data))
-    #+end_src
-
-- _Efficient Loop Closure Detection_:
-  + Large-scale SLAM requires recognizing previously visited locations.
-    KVS can index descriptors/features of keyframes for quick lookup.
-
-- _Storing Sensor Data Streams_:
-  + KVS can buffer sensor data (LiDAR, camera frames etc) before processing.
-
-- _Distributed SLAM Processing_:
-  + If SLAM is running on multiple devices (e.g a robot and an edge server),
-    KVS can share map updates efficiently.
-
-- _Persistent Map Storage_:
-  + Storing maps and pose graphs in a KVS allows quick reloading after a restart.
-
-* Example Structure
-kvstore/
-├── main.c          # Main loop and CLI
-├── hashtable.c     # Your hash table implementation
-├── hashtable.h     # Hash table header
-└── Makefile        # For building
-
-* Usage
-** Basic
-- _General syntax_:
-  > PUT <key> <value>
-  OK
-  > GET <key>
-  <value>
-- _Example_:
-  > PUT foo bar
-  OK
-  > GET foo
-  bar
-
-** Caching of Map Data and/or Keyframes *[SLAM]*
-*Ref*: [[https://chatgpt.com/share/68415b85-facc-8002-843b-050fee074a2f\\][chatgpt]]
-*** Keyframe Data
-1. _Pose Estimate (Camera Pose)_
-   + A pose consists of 3D coordinates[x,y,z] of the camera, as well
-     as the orientation/rotation of the camera, represented by a
-     rotation matrix.
-   + By identifying and tracking visual features, like corners and
-     edges, epipolar geometry and triangulation can be used to estimate
-     the relative motion between frames.
-   + Tools that can be used:
-     + _PnP (Perspective-n-Point)_: Estimates camera pose given 3D points
-       and their 2D projections.
-     + _Essential Matrix_: Encodes the relative rotation and translation
-       between two frames.
-   + Illustration: [[./assets/pose-estimation.png]]
-
-2. _Feature Keypoints_
-   + 2D coordinates of detected keypoints[ORB].
-   + Used for: tracking correspondences, triangulating 3D points and
-     reprojecting 3D landmarks.
-   + Keypoints consists of descriptors, which is needed for feature
-     matching between keyframes, place recognition and loop closure
-     detection.
-
-3. _3D Map Point Associations_
-   + Links between 2D keypoints in a keyframe and corresponding
-     3D landmarks in the global map.
-   + Essential for: Reprojection error calculation, bundle adjustment
-     and for maintaining map structure.
-
-4. _Camera Intrinsics_
-   + Parameters used for projection: Focal length, principal point and
-     distortion coefficients.
-   + Needed to project 3D points back into image space.
-
-5. _Timestamp_
-   + Required for tracking, syncing with other possible data and
-     log consistency.
-
-*** Example Keyframe Datastructure
-#+begin_src c++
-struct Keyframe {
-    int id;
-    double timestamp;
-
-    // Pose
-    Eigen::Matrix4d pose; // SE(3) transformation
-
-    // Features
-    std::vector<cv::KeyPoint> keypoints;
-    cv::Mat descriptors;
-
-    // Map point associations
-    std::vector<MapPoint*> associatedMapPoints;
-
-    // Camera model
-    CameraIntrinsics intrinsics;
-
-    // Optional
-    cv::Mat imagePyramid[NUM_LEVELS]; // Optional
-    BoWVector bowVector; // For place recognition
-};
-#+end_src
-*** Key Considerations
-- _No Depth Data_:
-  + Monocular vision disables depth data. Instead, triangulation of
-    keypoints is used. Storing reliable keypoint matches is therefor
-    of critical importance.
-
-- _Scale Ambiguity_
-  + All pose estimates and 3D points are up to an arbritary scale,
-    be consistent.
-
-- _Relocalization_
-  + Keyframes are the basis for recovering from tracking loss, so
-    the richer the data, the more robust it is.
-
-* References
-[[https://build-your-own.org/redis/03_hello_cs][DIY_REDIS]]
-[[https://medium.com/@sakalli.duran/crafting-a-key-value-store-designing-a-hash-table-4a1565329efb][crafting_kvs_hashtable]]
-[[https://dev.to/ravikishan/from-theory-to-practice-developing-a-distributed-key-value-database-with-sharding-and-replication-180d][distributed_kvs]]
-[[https://blog.algomaster.io/p/designing-a-distributed-key-value-store][designing_distributed_kvs]]
-[[https://dev.to/dtxcode/distributed-key-value-store-in-c-c-from-scratch-2j7b][distributed_kvs_c_cpp_from_scratch]]
-[[https://github.com/move47/Distributed-Key-Value-Store][distributed_kvs_github]]
-[[https://github.com/andy-byers/CalicoDB/tree/main/src][caliodb_example_project]]
-[[https://github.com/chxdeng/mabain][mabain_example_project]]
-[[https://jacklinweb.github.io/posts/key-value-storage/][kvs_implementation_C]]
