@@ -1,0 +1,6 @@
+menpo
+opencv3
+numpy
+scipy
+matplotlib
+sympy
