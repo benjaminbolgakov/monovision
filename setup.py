@@ -7,13 +7,13 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(
-    name='thesis_vision',
+    name='monovision',
     version='0.1.0',
-    description='Computer vision thesis',
+    description='Monocular SLAM solution',
     long_description=readme,
-    author='Benjamin Bolgakov & Anton Frank',
+    author='Benjamin Bolgakov',
     author_email='benjaminbolgakov@gmail.com',
-    url='https://github.com/benjaminbolgakov/thesis_vision',
+    url='https://github.com/benjaminbolgakov/monovision.git',
     license=license,
-    packages=find_packages(exclude=('tests', 'docs'))
+    packages=find_packages(exclude=('monov'))
 )
