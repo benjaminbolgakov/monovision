@@ -6,6 +6,7 @@ import cv2 as cv
 import glob
 import sys
 import os
+import platform
 import json
 #sys.path.append('src')
 
@@ -35,6 +36,16 @@ import programs.videosource
 
 #calib_src = "calibration/set_logitech/results/calibration.pkl"
 calib_src = "calibration/set_example/results/calibration_example.pkl"
+
+def clear_screen():
+    detected = platform.system()
+    print(detected)
+    if detected == "Windows":
+        os.system('cls')
+    elif detected == "Linux":
+        os.system('clear')
+    else:
+        print("Unknown system - Can't clear screen")
 
 def configure_calibration():
     print("1. Calibration\n")
@@ -101,7 +112,7 @@ if __name__ == "__main__":
                         "6) Capture photo\n"
                         "7) Configure\n"
                         "q) Exit\n\nSelect: ")
-        os.system('cls')
+        clear_screen()
         if choice == '1':
             print("==== Camera Calibration ====")
             programs.calibratecamera.calibrate_camera()

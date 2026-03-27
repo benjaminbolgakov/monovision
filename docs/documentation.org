@@ -81,8 +81,13 @@ _*Homogenous equations, i.e scalable.*_
 https://www.youtube.com/watch?v=GUbWsXU1mac&list=PL2zRqk16wsdoCCLpou-dGo7QQNks1Ppzo&index=3
 
 ** Chessboard
-*Dimensions* = 5x8
-*Square size* = 2cm
+- _Ex 1_
+  *Dimensions* = 5x8
+  *Square size* = 20mm
+
+- _Ex 2_
+  *Dimensions* = 12x8
+  *Square size* = 20mm
 
 * FastSLAM
 https://iopscience.iop.org/article/10.1088/1757-899X/551/1/012053/pdf

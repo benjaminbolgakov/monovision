@@ -8,6 +8,10 @@ backends = {
     "Windows": [cv.CAP_DSHOW, cv.CAP_MSMF, cv.CAP_FFMPEG, cv.CAP_ANY],
     "Linux": [cv.CAP_V4L2, cv.CAP_V4L, cv.CAP_FFMPEG, cv.CAP_GSTREAMER, cv.CAP_DSHOW, cv.CAP_ANY]
 }
+
+img_target = "./media/img_captures/"
+vid_target = "./media/vid_captures/"
+
 class Cap(object):
     """
     - System layer chain:
@@ -35,6 +39,7 @@ class Cap(object):
         self.cap = self.create_cap(vid_src)
         self.cap_w, self.cap_h = self.get_resolution()
         self.setup = [] #Requested cap-configuration [ [props], [api] ]
+        self.focus_setup = False
 
     def create_cap(self, vid_src, cam_id=0, buffer_size=4):
         """
@@ -84,6 +89,12 @@ class Cap(object):
         try:
             cv.resize(frame, self.resolution)
             cv.imshow(window_name, frame)
+
+            # Initialize trackbar ONLY ONCE
+            if not self.focus_setup:
+                self.manual_focus(frame, window_name)
+                self.focus_setup = True
+
             if cv.waitKey(25) == ord('q'):
                 return False
             else:
@@ -91,8 +102,27 @@ class Cap(object):
         except TypeError:
             print("Invalid window name")
 
+    def manual_focus(self, frame, window_name):
+        """
+        Disables autofocus and creates a trackbar for manual focus control.
+        """
+        # Disable autofocus
+        self.cap.set(cv.CAP_PROP_AUTOFOCUS, 0)
+
+        # Get current focus to set initial slider position
+        start_val = int(self.cap.get(cv.CAP_PROP_FOCUS))
+        if start_val < 0: start_val = 0 # Handle cases where get returns -1
+
+        # Define a callback function for the trackbar
+        def on_focus_change(val):
+            self.cap.set(cv.CAP_PROP_FOCUS, val)
+
+        cv.createTrackbar("Focus", window_name, start_val, 255, on_focus_change)
+        print(f" *Manual Focus Slider initialized on {window_name}")
+
     def capture_img(self, frame, fdir=None, fname=None):
-        fdir = "./" if fdir is None else fdir
+        #fdir = "./media/img_captures/" if fdir is None else fdir
+        fdir = img_target if fdir is None else fdir
         fname = "capture" if fname is None else fname
         fext = ".png"
         fpath = file_checker(fdir, fname, fext)
@@ -148,6 +178,12 @@ class Cap(object):
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))
         else:
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+
+        # Disable lousy autofocus function
+        af_res = cap.set(cv.CAP_PROP_AUTOFOCUS, 0)
+        print(f"Autofocus: {af_res}")
+        # Todo: Implement manual focusing
+        # cap.set(cv.CAP_PROP_FOCUS, 50) # Typical range: 0-255
 
         # Empty list for the results of setting props
         prop_set_results = [None for _ in range(4)]
