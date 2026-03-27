@@ -71,12 +71,13 @@ def calibrate(calib_src, val_src, resolution, square_size, chessboard_size,
     # /// self.util.printer(print_data)
     #Write calibration results (instrinsic parameters) to file
     write_calibration(output_src, ret, mtx, dist, rvecs, tvecs, mtx_n)
-    #Perform validation
-    print("######################")
-    print("Validating:")
-    print("######################")
-    #Validate calibration using validation-set
-    validate(val_src, resolution, square_size, chessboard_size, mtx, dist, rvecs, tvecs, interactive)
+    if os.path.isdir(val_src):
+        #Perform validation
+        print("######################")
+        print("Validating:")
+        print("######################")
+        #Validate calibration using validation-set
+        validate(val_src, resolution, square_size, chessboard_size, mtx, dist, rvecs, tvecs, interactive)
 
 
 def validate(val_src, resolution, square_size, chessboard_size, mtx, dist, rvecs, tvecs, interactive):

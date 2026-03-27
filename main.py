@@ -92,6 +92,18 @@ def print_current_config():
     print(f"Marker size: {config['marker_size']}mm\n")
     return config
 
+def calibration_method():
+    while True:
+        choice = input("1) Interactive calibration\n2) Existing training set\nSelect: ")
+        if choice == '1':
+            programs.calibratecamera.calibrate_camera_interactive()
+        elif choice == '2':
+            programs.calibratecamera.calibrate_camera()
+        elif choice == 'q':
+            break
+        else:
+            print("Invalid choice, try again.")
+
 if __name__ == "__main__":
     # Check for existing configuration file
     config_exists = os.path.isfile('config.json')
@@ -115,7 +127,8 @@ if __name__ == "__main__":
         clear_screen()
         if choice == '1':
             print("==== Camera Calibration ====")
-            programs.calibratecamera.calibrate_camera()
+            calibration_method()
+            #programs.calibratecamera.calibrate_camera()
         elif choice == '2':
             print("==== Camera Feed ====")
             print_current_config()

@@ -1,8 +1,10 @@
 import os
 import cv2 as cv
+from pathlib import Path
+import glob
 # import monov.cap
-from monov import calibration
-from monov.cap import Cap
+from monov.calibration import calibrate
+#from monov.cap import Cap
 
 def create_calibration_dir():
     srcdir = os.path.dirname(os.path.abspath(__file__))
@@ -66,6 +68,64 @@ def capture():
     cv.destroyAllWindows()
 
 def calibrate_camera():
+    """
+     - Performs camera calibration and validation on pre-existing training set.
+    """
+    # Acquire directory name of trainingset
+    current_dir = Path(__file__).resolve().parent
+    calib_dir = current_dir.parent / 'calibration'
+    while True:
+        print("Note: Ensure training-set is placed inside a directory 'src', located in the 'calibration/' directory\n")
+        set_name = input("Enter name of directory containing training-set: ")
+        #set_name_src = calib_dir / set_name / 'src'
+        set_path = calib_dir / set_name
+        set_name_src = set_path / 'src'
+        print(f"Checking path: {set_name_src}")
+        if set_name_src.is_dir():
+            break
+        else:
+            print(f"Directory not found: {set_name_src}\nPlease try again.")
+
+    # res_target = os.path.join(set_name, "results")
+    # valids_target = os.path.join(set_name, "validation")
+    # os.makedirs(res_target, exist_ok=True)
+    res_target = set_path / "results"
+    valids_target = set_path / "validation"
+
+    res_target.mkdir(parents=True, exist_ok=True)
+    valids_target.mkdir(parents=True, exist_ok=True)
+
+    # Acquire chessboard information
+    print("\nEnter chessboard parameters")
+    square_size = int(input("Square size(mm): ")) # chessboard square size (mm)
+    x_squares = int(input("No. horizontal squares: "))
+    y_squares = int(input("No. vertical squares: "))
+    board_dimensions = (x_squares, y_squares)
+
+    # Acquire desired camera resolution
+    print("\nEnter desired camera resolution(W,H)")
+    w_res = int(input("W: "))
+    h_res = int(input("H: "))
+    camera_resolution = (w_res, h_res)
+
+    # Perform calibration
+    calib_img_paths = [str(p) for p in set_name_src.glob('*')]
+    valid_img_paths = [str(p) for p in valids_target.glob('*')]
+    print(f"Found {len(calib_img_paths)} calibration images.")
+    #output_src = res_target
+    calibrate(
+        calib_img_paths,
+        valid_img_paths,
+        camera_resolution,
+        square_size,
+        board_dimensions,
+        str(res_target)
+    )
+    #calibrate(calib_img_src, valid_img_src, camera_resolution, square_size, board_dimensions, output_src)
+    print("Calibration finished.")
+
+
+def calibrate_camera_interactive():
     """
      - Interactively creates two image sets:
        + One training set to calculate the camera parameters
