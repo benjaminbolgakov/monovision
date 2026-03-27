@@ -41,7 +41,7 @@ def configure_calibration():
     print("- Calibrations are stored in the 'calibration' directory.\n")
     while True:
         calib_input = input("Path to calibration file: calibration/")
-        calib_src = "calibration/" + calib_input
+        calib_src = "./calibration/" + calib_input
         file_verified = os.path.isfile(calib_src)
         if file_verified:
             break
@@ -54,7 +54,7 @@ def configure_resolution():
     #print("- Acceptable resolutions(WxH): 1920x1080 720x480 todo..\n")
     w = int(input("W: "))
     h = int(input("H: "))
-    return (w,h)
+    return [w,h]
 
 def configure_markersize():
     print("3. Marker size\n")
@@ -70,14 +70,15 @@ def configure():
     # Write configuration to file
     with open('config.json', 'w') as fp:
         json.dump(config, fp)
+    print("- New configuration:")
 
 def print_current_config():
     with open('config.json') as conf_file:
         config = json.load(conf_file)
     print("\n=Current configuration=")
-    print(f"Calibration file: {config["calibration_file"]}")
-    print(f"Camera resolution: {config["camera_resolution"][0]}x{config["camera_resolution"][1]}")
-    print(f"Marker size: {config["marker_size"]}mm\n")
+    print(f"Calibration file: {config['calibration_file']}")
+    print(f"Camera resolution: {config['camera_resolution'][0]}x{config['camera_resolution'][1]}")
+    print(f"Marker size: {config['marker_size']}mm\n")
     return config
 
 if __name__ == "__main__":
@@ -106,6 +107,7 @@ if __name__ == "__main__":
             programs.calibratecamera.calibrate_camera()
         elif choice == '2':
             print("==== Camera Feed ====")
+            print_current_config()
             programs.camerafeed.camera_feed(config)
         elif choice == '3':
             print("==== Pre-recorded Video ====")
@@ -122,8 +124,9 @@ if __name__ == "__main__":
             print("==== Capture Photo ====")
             programs.capturephoto.capture_photo()
         elif choice == '7':
-            configure()
             print("==== Configuration Wizard ====")
+            configure()
+            config = print_current_config()
         elif choice == 'q':
             break
         else:
