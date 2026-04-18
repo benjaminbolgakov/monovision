@@ -1,4 +1,5 @@
 import cv2 as cv
+import os
 import glob
 import pickle
 import numpy as np
@@ -149,3 +150,38 @@ def validate(val_src, resolution, square_size, chessboard_size, mtx, dist, rvecs
     r_error_mean_set = (r_error_mean_set/len(img_error_list))
     print_data = ["\n=Finished= \nMean projection-error of set:", r_error_mean_set]
     printer(print_data, calib_log_file)
+
+def calc_error(objpoints, imgpoints, mtx, dist, rvecs, tvecs):
+    """
+    ### Calculate mean reprojection error ####
+    """
+    mean_error = 0
+    error_list = []
+    for i in range(len(objpoints)):
+        imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+        error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2) / len(imgpoints2)
+        error_list.append(error)
+        mean_error += error
+    mean_error_tot = (mean_error/len(objpoints))
+    return (mean_error_tot, error_list)
+
+def write_calibration(output_src, ret, mtx, dist, rvecs, tvecs, mtx_n):
+    f_name = 'calibration.pkl'
+    f_full = file_checker(output_src, f_name)
+    with open(f_full, 'wb') as f:
+        pickle.dump((ret, mtx, dist, rvecs, tvecs, mtx_n), f)
+
+def file_checker(f_path, f_name):
+    ct = 1
+    write = False
+    f_full = f_path + f_name
+    while not write:
+        print(f_full)
+        if os.path.exists(f_full):
+            print("Exists")
+            f_full = f_path + str(ct) + f_name
+            ct += 1
+        else:
+            write = True
+            print("NO EXISTS")
+    return f_full

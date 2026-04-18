@@ -1,6 +1,7 @@
 import os
 import cv2 as cv
 from pathlib import Path
+import yaml
 import glob
 # import monov.cap
 from monov.calibration import calibrate
@@ -69,50 +70,66 @@ def capture():
 
 def calibrate_camera():
     """
-     - Performs camera calibration and validation on pre-existing training set.
+    Performs camera calibration using parameters from a YAML config file.
     """
-    # Acquire directory name of trainingset
     current_dir = Path(__file__).resolve().parent
     calib_dir = current_dir.parent / 'calibration'
     while True:
-        print("Note: Ensure training-set is placed inside a directory 'src', located in the 'calibration/' directory\n")
         set_name = input("Enter name of directory containing training-set: ")
         #set_name_src = calib_dir / set_name / 'src'
         set_path = calib_dir / set_name
         set_name_src = set_path / 'src'
+        config_path = set_path / 'config.yaml'
         print(f"Checking path: {set_name_src}")
         if set_name_src.is_dir():
             break
         else:
             print(f"Directory not found: {set_name_src}\nPlease try again.")
 
-    # res_target = os.path.join(set_name, "results")
-    # valids_target = os.path.join(set_name, "validation")
-    # os.makedirs(res_target, exist_ok=True)
+    # 1. Load Configuration
+    config_file = Path(config_path)
+    if not config_file.exists():
+        raise FileNotFoundError(f"Configuration file not found at {config_path}")
+
+    with open(config_file, 'r') as f:
+        config = yaml.safe_load(f)
+
+    # 2. Setup Paths
+    current_dir = Path(__file__).resolve().parent
+    calib_dir = current_dir.parent / 'calibration'
+
+    set_name = config['training_set_name']
+    set_path = calib_dir / set_name
+    set_name_src = set_path / 'src'
+
+    if not set_name_src.is_dir():
+        raise NotADirectoryError(f"Training set 'src' not found at: {set_name_src}")
+
     res_target = set_path / "results"
     valids_target = set_path / "validation"
 
     res_target.mkdir(parents=True, exist_ok=True)
     valids_target.mkdir(parents=True, exist_ok=True)
 
-    # Acquire chessboard information
-    print("\nEnter chessboard parameters")
-    square_size = int(input("Square size(mm): ")) # chessboard square size (mm)
-    x_squares = int(input("No. horizontal squares: "))
-    y_squares = int(input("No. vertical squares: "))
-    board_dimensions = (x_squares, y_squares)
+    # 3. Extract Parameters from Config
+    square_size = config['square_size_mm']
+    board_dimensions = (
+        config['chessboard']['horizontal_squares'],
+        config['chessboard']['vertical_squares']
+    )
+    camera_resolution = (
+        config['resolution']['width'],
+        config['resolution']['height']
+    )
 
-    # Acquire desired camera resolution
-    print("\nEnter desired camera resolution(W,H)")
-    w_res = int(input("W: "))
-    h_res = int(input("H: "))
-    camera_resolution = (w_res, h_res)
+    # 4. Perform calibration
+    calib_img_paths = [str(p) for p in set_name_src.glob('*') if p.suffix.lower() in ['.jpg', '.png', '.bmp']]
+    valid_img_paths = [str(p) for p in valids_target.glob('*') if p.suffix.lower() in ['.jpg', '.png', '.bmp']]
 
-    # Perform calibration
-    calib_img_paths = [str(p) for p in set_name_src.glob('*')]
-    valid_img_paths = [str(p) for p in valids_target.glob('*')]
-    print(f"Found {len(calib_img_paths)} calibration images.")
-    #output_src = res_target
+    print(f"--- Starting Calibration ---")
+    print(f"Dataset: {set_name}")
+    print(f"Images found: {len(calib_img_paths)}")
+
     calibrate(
         calib_img_paths,
         valid_img_paths,
@@ -121,8 +138,8 @@ def calibrate_camera():
         board_dimensions,
         str(res_target)
     )
-    #calibrate(calib_img_src, valid_img_src, camera_resolution, square_size, board_dimensions, output_src)
-    print("Calibration finished.")
+
+    print("Calibration finished successfully.")
 
 
 def calibrate_camera_interactive():
