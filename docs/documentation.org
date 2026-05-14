@@ -88,6 +88,16 @@ https://www.youtube.com/watch?v=GUbWsXU1mac&list=PL2zRqk16wsdoCCLpou-dGo7QQNks1P
 - _Ex 2_
   *Dimensions* = 12x8
   *Square size* = 20mm
+  + Note:
+	input into program as: 11,7 (calibration expects number of 'inner corners', not number of squares)
+
+** Camera Properties
+- _Ex 1_
+  + camera model: [Andersson WBC 1.1]
+  + 1920x1080 @ 30fps [video]
+  + autofocus >= 10cm
+  + fov = 65° horizontal
+  + Automatic White Balance (AWB)
 
 * FastSLAM
 https://iopscience.iop.org/article/10.1088/1757-899X/551/1/012053/pdf
