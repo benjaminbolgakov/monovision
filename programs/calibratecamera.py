@@ -1,7 +1,6 @@
 import os
 import cv2 as cv
 from pathlib import Path
-import yaml
 import glob
 # import monov.cap
 from monov.calibration import calibrate
