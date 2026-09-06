@@ -9,3 +9,19 @@ wheel==0.40.0
 PySDL2==0.9.15
 pysdl2-dll==2.26.5
 scikit-image==0.20.0
+
+# CLI Tools
+# rich
+# InquirerPy
+# simple-term-menu
+# pymenu-cli
+
+# OCR = Optical Character Recognition
+# pip install easyocr
+# pip install pytesseract
+
+# YOLO = You Only Look Once
+# pip install ultralytics
+
+# Differentiable Computer Vision
+# pip install kornia
